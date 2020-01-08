@@ -1,7 +1,7 @@
 import ply.lex as lex
 import ply.yacc as yacc
-from bsuite.binterpreter import scadlike_lex
-from bsuite.binterpreter.scadlike_lex import ScadLikeLex
+from bcad.binterpreter import scadlike_lex
+from bcad.binterpreter.scadlike_lex import ScadLikeLex
 import logging
 
 class ParserError(Exception):

@@ -147,13 +147,13 @@ class SCLShape(object):
         self.shape = shape
 
     def transform(self, trsf):
-        self.trsf = self.trsf*trsf
+        self.trsf = trsf
+        self.transform_shape()
 
     def transform_shape(self):
         self.shape = BRepBuilderAPI_Transform(self.shape, self.trsf, True).Shape()
 
     def display(self):
-        self.transform_shape()
         display.DisplayShape(self.shape)
 
 class SCLPart3(SCLContext):

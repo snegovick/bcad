@@ -1,4 +1,4 @@
-from bsuite.binterpreter.scadlike_parser import ScadLikeParser, ParserError
+from bcad.binterpreter.scadlike_parser import ScadLikeParser, ParserError
 
 #from imcad import *
 #from imcad.core.context import BaseContext, BaseElement, current
@@ -14,7 +14,7 @@ import logging
 
 debug_parser=False
 
-from bsuite.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLPart3, scl_init_display, get_inc_name
+from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLPart3, scl_init_display, get_inc_name
 
 class UnknownVariableError(Exception):
     def __init__(self, varname, line):
