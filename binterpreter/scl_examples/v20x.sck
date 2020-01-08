@@ -1,0 +1,51 @@
+module v20x_segment1(px, py) {
+  line([px[0], py[0]], [px[1], py[1]]);
+  fillet(2);
+  line([px[1], py[1]],[px[2], py[2]]);
+  fillet(1);
+  line([px[2], py[2]], [px[3], py[3]]);
+  fillet(0.5);
+  line([px[3], py[3]], [px[4], py[4]]);
+  line([px[4], py[4]], [px[5], py[5]]);
+  line([px[5], py[5]], [px[6], py[6]]);
+}
+
+module v20x_segment2(px, py) {
+  line([py[6], px[6]], [py[5], px[5]]);
+  line([py[5], px[5]], [py[4], px[4]]);
+  line([py[4], px[4]], [py[3], px[3]]);
+  fillet(0.5);
+  line([py[3], px[3]], [py[2], px[2]]);
+  fillet(1);
+  line([py[2], px[2]], [py[1], px[1]]);
+  fillet(2);
+  line([py[1], px[1]], [py[0], px[0]]);
+}
+
+module v20x_sketch() {
+  outer_width=20;
+  core_size=7.5;
+  core_drill_d=5;
+  rib_thickness=1.5;
+  end_thickness=1.4;
+  inner_width = 13;
+  end_gap = 6.5;
+  
+  x = [0, core_size/2-rib_thickness/2/sqrt(2), inner_width/2, inner_width/2, end_gap/2, end_gap/2, outer_width/2];
+  y = [core_size/2, core_size/2, inner_width/2+rib_thickness/2/sqrt(2), outer_width/2-end_thickness, outer_width/2-end_thickness, outer_width/2, outer_width/2];
+
+  v20x_segment1(x, y);
+  fillet(1);
+  v20x_segment2(x, y);
+  v20x_segment1(y, -x);
+  fillet(1);
+  v20x_segment2(-y, x);
+  v20x_segment1(-x, -y);
+  fillet(1);
+  v20x_segment2(-x, -y);
+  v20x_segment1(-x, y);
+  fillet(1);
+  v20x_segment2(x, -y);
+}
+
+v20x_sketch();
