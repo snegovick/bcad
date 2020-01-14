@@ -12,6 +12,7 @@ class ParserError(Exception):
 
 class ScadLikeParser(ScadLikeLex):
     precedence = (
+        ('nonassoc', 'LT', 'LE', 'GE', 'GT'),  # Nonassociative operators
         ('left', 'PLUS', 'MINUS'),
         ('left', 'TIMES', 'DIVIDE'),
         ('right', 'UMINUS'),
@@ -105,6 +106,10 @@ class ScadLikeParser(ScadLikeLex):
         'expression : MINUS expression %prec UMINUS'
         p[0] = {'type': 'expr_unop', 'val': [p[2], '-'], 'line': p.lineno(1)}
 
+    def p_expression_terop(self, p):
+        'expression : expression QUESTION expression COLON expression'
+        p[0] = {'type': 'expr_terop', 'val': {'condition': p[1], 'true': p[3], 'false': p[5]}, 'line': p.lineno(1)}
+
     def p_expression_group(self, p):
         'expression : LPAREN expression RPAREN'
         p[0] = p[2]
@@ -112,6 +117,10 @@ class ScadLikeParser(ScadLikeLex):
     def p_expression_number(self, p):
         'expression : NUMBER'
         p[0] = {'type': 'expr_number', 'val': float(p[1]), 'line': p.lineno(1)}
+
+    def p_expression_string(self, p):
+        'expression : STRING'
+        p[0] = {'type': 'expr_string', 'val': p[1], 'line': p.lineno(1)}
 
     def p_expression_bool(self, p):
         '''expression : TRUE
@@ -142,6 +151,7 @@ class ScadLikeParser(ScadLikeLex):
         '''call_builtin_modules : LINE parameters
                                 | FILLET parameters
                                 | CUBE parameters
+                                | CYLINDER parameters
         '''
         p[0] = {'type': 'stat_call_builtin_modules', 'id': p[1], 'args': p[2], 'line': p.lineno(1)}
 
@@ -183,7 +193,10 @@ class ScadLikeParser(ScadLikeLex):
                            | LINEAR_EXTRUDE parameters action_child_block
                            | MIRROR parameters action_child_block
                            | ROTATE parameters action_child_block
-                           | TRANSLATE parameters action_child_block'''
+                           | UNION parameters action_child_block
+                           | DIFFERENCE parameters action_child_block
+                           | TRANSLATE parameters action_child_block
+                           | COLOR parameters action_child_block'''
         p[0] = {'type': 'stat_builtin', 'id': p[1], 'args': p[2], 'block': p[3], 'line': p.lineno(1)}
 
     def p_function_definition(self, p):
@@ -207,6 +220,14 @@ class ScadLikeParser(ScadLikeLex):
             p[0] = {'type':'array_list', 'val': [], 'line': p.lineno(0)}
         else:
             p[0] = p[2]
+
+    def p_array_right_range(self, p):
+        '''array_right : OSQUARE expression COLON expression ESQUARE
+                       | OSQUARE expression COLON expression COLON expression ESQUARE'''
+        if (len(p) == 5):
+            p[0] = {'type':'array_range', 'val': {'start': p[2], 'end': p[4]}, 'line': p.lineno(0)}
+        else:
+            p[0] = {'type':'array_range', 'val': {'start': p[2], 'end': p[6], 'step': p[4]}, 'line': p.lineno(0)}
 
     def p_expression_array(self, p):
         'expression : array_right'

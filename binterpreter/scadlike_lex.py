@@ -67,6 +67,8 @@ class ScadLikeLex(object):
         'NUMBER',
         'COMMA',
         'SEMICOLON',
+        'COLON',
+        'QUESTION',
         'PLUS',
         'MINUS',
         'TIMES',
@@ -94,30 +96,32 @@ class ScadLikeLex(object):
         # 'MODIFIERDISABLE'
     ] + list(reserved.values())
 
-    #t_NAME    = r'[$]?[a-zA-Z_]+[0-9]*'
-    t_NUMBER  = r'[-]?[0-9]*[\.]*[0-9]+([eE]-?[0-9]+)*'
-    t_COMMA   = r','
-    t_SEMICOLON = r';'
-    t_PLUS    = r'\+'
-    t_MINUS   = r'-'
-    t_TIMES   = r'\*'
-    t_DIVIDE  = r'/'
-    t_EQUALS  = r'='
-    t_LPAREN  = r'\('
-    t_RPAREN  = r'\)'
-    t_OBRACE  = r'{'
-    t_EBRACE  = r'\}'
-    t_OSQUARE = r'\['
-    t_ESQUARE = r'\]'
-    t_DOT     = r'\.'
-    t_STRING  = r'"[^"]*"'
-    t_USESTRING = r'<[\w_\.]*>'
-    t_ISEQUAL  = r'=='
-    t_ISNOTEQUAL = r'!='
-    t_GE      = r'>='
-    t_LE      = r'<='
-    t_GT      = r'>'
-    t_LT      = r'<'
+    #t_NAME          = r'[$]?[a-zA-Z_]+[0-9]*'
+    t_NUMBER         = r'[0-9]*[\.]*[0-9]+([eE]-?[0-9]+)*'
+    t_COMMA          = r','
+    t_SEMICOLON      = r';'
+    t_COLON          = r':'
+    t_QUESTION       = r'\?'
+    t_PLUS           = r'\+'
+    t_MINUS          = r'-'
+    t_TIMES          = r'\*'
+    t_DIVIDE         = r'/'
+    t_EQUALS         = r'='
+    t_LPAREN         = r'\('
+    t_RPAREN         = r'\)'
+    t_OBRACE         = r'{'
+    t_EBRACE         = r'\}'
+    t_OSQUARE        = r'\['
+    t_ESQUARE        = r'\]'
+    t_DOT            = r'\.'
+    t_STRING         = r'"[^"]*"'
+    t_USESTRING      = r'<[\w_\.]*>'
+    t_ISEQUAL        = r'=='
+    t_ISNOTEQUAL     = r'!='
+    t_GE             = r'>='
+    t_LE             = r'<='
+    t_GT             = r'>'
+    t_LT             = r'<'
     t_ignore_COMMENT = r'//.*'
 
     # t_MODIFIERBACK    = r'%'

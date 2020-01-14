@@ -1,7 +1,8 @@
-from OCC.Core.gp import gp_Ax1, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec, gp_Pln, gp_Ax3
+from OCC.Core.gp import gp_Ax1, gp_Ax2, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec, gp_Pln, gp_Ax3
 from OCC.Core.ChFi2d import ChFi2d_AnaFilletAlgo
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_Transform, BRepBuilderAPI_MakeFace
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakePrism, BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeBox
+from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse, BRepAlgoAPI_Cut
 from OCC.Extend.ShapeFactory import make_wire
 from OCC.Display.SimpleGui import init_display
 from OCC.Core.TopoDS import topods, TopoDS_Compound
@@ -17,9 +18,22 @@ start_display = None
 add_menu = None
 add_functionto_menu = None
 
+Noval = 'no val'
+
+def is_var_set(v):
+    if (v!=None) and (v!=Noval):
+        return True
+    return False
+
 names = {
     "translate": 0,
+    "color": 0,
     "cube": 0,
+    "cylinder": 0,
+    "linear_extrude": 0,
+    "union": 0,
+    "difference": 0,
+    "profile2": 0,
     "unknown": 0,
 }
 
@@ -141,10 +155,20 @@ class SCLContext(object):
         display.FitAll()
         start_display()
 
+    def get_children(self):
+        children = []
+        for c in self.children:
+            children.append(c)
+            children.extend(c.get_children())
+        return children
+
 class SCLShape(object):
     def __init__(self, shape):
         self.trsf = gp_Trsf()
         self.shape = shape
+
+    def get_shape(self):
+        return self.shape
 
     def transform(self, trsf):
         self.trsf = trsf
@@ -173,22 +197,24 @@ class SCLPart3(SCLContext):
         if (x!=0.0):
             axx = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(1., 0., 0.))
             a_trsf1 = gp_Trsf()
-            a_trsf1.SetRotation(axx, x)
+            a_trsf1.SetRotation(axx, math.radians(x))
             trsf = trsf*a_trsf1
 
         if (y!=0.0):
             axy = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(0., 1., 0.))
             a_trsf2 = gp_Trsf()
-            a_trsf2.SetRotation(axy, y)
+            a_trsf2.SetRotation(axy, math.radians(y))
             trsf = trsf*a_trsf2
 
         if (z!=0.0):
             axz = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(0., 0., 1.))
             a_trsf3 = gp_Trsf()
-            a_trsf3.SetRotation(axz, z)
+            a_trsf3.SetRotation(axz, math.radians(z))
             trsf = trsf*a_trsf3
 
-        self.propagate_trsf(trsf)
+        for c in self.children:
+            c.propagate_trsf(trsf)
+
 
     def translate(self, x=0.0, y=0.0, z=0.0):
         v = gp_Vec(x, y, z)
@@ -196,6 +222,21 @@ class SCLPart3(SCLContext):
         a_trsf.SetTranslation(v)
         for c in self.children:
             c.propagate_trsf(a_trsf)
+
+    def mirror(self, x=0.0, y=0.0, z=0.0):
+        if (x==0 and y==0 and z==0):
+            warning("Warning: no axis to mirror")
+            return
+        trsf = gp_Trsf()
+        
+        d = gp_Dir(x, y, z)
+        p = gp_Pnt()
+        trsf.SetMirror(gp_Ax1(p, d))
+        for c in self.children:
+            c.propagate_trsf(trsf)
+
+    def color(self, r=0.0, g=0.0, b=0.0, color=None):
+        pass
 
     def cube(self, xyz, center=False):
         cube_shape = BRepPrimAPI_MakeBox(xyz.x(), xyz.y(), xyz.z()).Shape()
@@ -205,6 +246,32 @@ class SCLPart3(SCLContext):
         name = get_inc_name("cube")
         sclp.set_name(name)
         debug("Creating cube %s"%(name,))
+        self.add_child_context(sclp)
+
+    def cylinder(self, r, d, h, center=False):
+        nr = None
+        nh = None
+        if (not is_var_set(d)) and is_var_set(r):
+            nr = r
+        elif is_var_set(d) and (not is_var_set(r)):
+            nr = d/2.0
+        elif is_var_set(d) and is_var_set(r):
+            nr = d/2.0
+        elif (not is_var_set(d)) and (not is_var_set(r)):
+            nr = 0.5
+
+        nh = 1.0
+        if is_var_set(h):
+            nh = h
+
+        ax = gp_Ax2(gp_Pnt(0,0,0), gp_Dir(0,0,1))
+        s = BRepPrimAPI_MakeCylinder(ax, nr, nh).Shape()
+        scls = SCLShape(s)
+        sclp = SCLPart3(self)
+        sclp.set_shape(scls)
+        name = get_inc_name("cylinder")
+        sclp.set_name(name)
+        debug("Creating cylinder %s"%(name,))
         self.add_child_context(sclp)
 
     def display(self):
@@ -239,19 +306,19 @@ class SCLProfile2(SCLContext):
         if (x!=0.0):
             axx = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(1., 0., 0.))
             a_trsf1 = gp_Trsf()
-            a_trsf1.SetRotation(axx, x)
+            a_trsf1.SetRotation(axx, math.radians(x))
             self.trsf = self.trsf*a_trsf1
 
         if (y!=0.0):
             axy = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(0., 1., 0.))
             a_trsf2 = gp_Trsf()
-            a_trsf2.SetRotation(axy, y)
+            a_trsf2.SetRotation(axy, math.radians(y))
             self.trsf = self.trsf*a_trsf2
 
         if (z!=0.0):
             axz = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(0., 0., 1.))
             a_trsf3 = gp_Trsf()
-            a_trsf3.SetRotation(axz, z)
+            a_trsf3.SetRotation(axz, math.radians(z))
             self.trsf = self.trsf*a_trsf3
 
     def mirror(self, x=0.0, y=0.0, z=0.0):
@@ -314,3 +381,54 @@ class SCLExtrude(SCLContext):
     def display(self):
         debug("Display SCLExtrude")
         display.DisplayShape(self.body.Shape())
+
+class SCLUnion(SCLPart3):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def union(self):
+        children = self.get_children()
+        shapes = []
+        debug("children: %s"%(children,))
+        for c in children:
+            if c.shape != None:
+                shapes.append(c.shape)
+        u = None
+        if len(shapes)>0:
+            u = shapes[0].get_shape()
+            for s in shapes[1:]:
+                u = BRepAlgoAPI_Fuse(u, s.get_shape()).Shape()
+        self.shape = SCLShape(u)
+        self.children = []
+
+    def display(self):
+        debug("Display SCLUnion")
+        if self.shape != None:
+            self.shape.display()
+
+class SCLDifference(SCLPart3):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def difference(self):
+        children = self.get_children()
+        shapes = []
+        debug("children: %s"%(children,))
+        for c in children:
+            if c.shape != None:
+                shapes.append(c.shape)
+        u = None
+        f = None
+        if len(shapes)>1:
+            f = shapes[0].get_shape()
+            for s in shapes[1:]:
+                f = BRepAlgoAPI_Cut(f, s.get_shape()).Shape()
+        self.shape = SCLShape(f)
+        self.children = []
+
+    def display(self):
+        debug("Display SCLUnion")
+        if self.shape != None:
+            self.shape.display()
+
+            

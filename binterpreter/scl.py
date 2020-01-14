@@ -4,6 +4,7 @@ from bcad.binterpreter.scadlike_parser import ScadLikeParser, ParserError
 #from imcad.core.context import BaseContext, BaseElement, current
 
 import os
+import numpy as np
 import json
 import math
 import argparse
@@ -13,8 +14,13 @@ from logging import debug, info, warning, error, critical
 import logging
 
 debug_parser=False
+debug_expr_en = False
 
-from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLPart3, scl_init_display, get_inc_name
+def debug_expr(msg):
+    if (debug_expr_en):
+        debug(msg)
+
+from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLDifference, SCLPart3, scl_init_display, get_inc_name, Noval
 
 class UnknownVariableError(Exception):
     def __init__(self, varname, line):
@@ -44,8 +50,16 @@ translate_module_definition = {'type': 'stat_module_definition', 'id': 'translat
         {'type': 'expr_number', 'val': 0.0, 'line': 0},
         {'type': 'expr_number', 'val': 0.0, 'line': 0}
     ]}}]}
+color_module_definition = {'type': 'stat_module_definition', 'id': 'color', 'line': 0, 'args': [
+    {'type': 'expr_assign', 'id': 'v', 'val': {'type': 'array_list', 'line': 0, 'val': [
+        {'type': 'expr_number', 'val': 0.0, 'line': 0},
+        {'type': 'expr_number', 'val': 0.0, 'line': 0},
+        {'type': 'expr_number', 'val': 0.0, 'line': 0}
+    ]}}]}
 profile_module_definition = {'type': 'stat_module_definition', 'id': 'profile', 'line': 0, 'args': []}
 linear_extrude_module_definition = {'type': 'stat_module_definition', 'id': 'linear_extrude', 'line': 0, 'args': [{'type': 'expr_assign', 'id': 'l', 'val': {'type': 'expr_number', 'val': 1.0, 'line': 0}, 'line': 0}]}
+union_module_definition = {'type': 'stat_module_definition', 'id': 'union', 'line': 0, 'args': []}
+difference_module_definition = {'type': 'stat_module_definition', 'id': 'difference', 'line': 0, 'args': []}
 mirror_module_definition = {'type': 'stat_module_definition', 'id': 'mirror', 'line': 0, 'args': [
     {'type': 'expr_assign', 'id': 'v', 'val': {'type': 'array_list', 'line': 0, 'val': [
         {'type': 'expr_number', 'val': 0.0, 'line': 0},
@@ -67,12 +81,18 @@ line_module_definition = {'type': 'stat_module_definition', 'id': 'line', 'line'
         {'type': 'expr_number', 'val': 0.0, 'line': 0}
     ]}}
 ]}
-cube_module_definition = {'type': 'stat_module_definition', 'id': 'line', 'line': 0, 'args': [
+cube_module_definition = {'type': 'stat_module_definition', 'id': 'cube', 'line': 0, 'args': [
     {'type': 'expr_assign', 'id': 'v', 'val': {'type': 'array_list', 'line': 0, 'val': [
         {'type': 'expr_number', 'val': 1.0, 'line': 0},
         {'type': 'expr_number', 'val': 1.0, 'line': 0},
         {'type': 'expr_number', 'val': 1.0, 'line': 0}
     ]}},
+    {'type': 'expr_assign', 'id': 'center', 'line': 0, 'val': {'type': 'expr_bool', 'line': 0, 'val': False}}
+]}
+cylinder_module_definition = {'type': 'stat_module_definition', 'id': 'cylinder', 'line': 0, 'args': [
+    {'type': 'expr_assign', 'id': 'r', 'val': {'type': 'expr_number', 'line': 0, 'val': Noval}},
+    {'type': 'expr_assign', 'id': 'd', 'val': {'type': 'expr_number', 'line': 0, 'val': Noval}},
+    {'type': 'expr_assign', 'id': 'h', 'val': {'type': 'expr_number', 'line': 0, 'val': 1.0}},
     {'type': 'expr_assign', 'id': 'center', 'line': 0, 'val': {'type': 'expr_bool', 'line': 0, 'val': False}}
 ]}
 
@@ -185,17 +205,18 @@ class SCL:
         debug("Display context")
         self.context.display()
 
-    def push_context(self, ctx):
+    def push_context(self, ctx, name):
         n = ctx(self.active_context)
+        n.set_name(name)
         self.active_context.add_child_context(n)
         self.active_context = n
 
     def pop_context(self):
         self.active_context = self.active_context.parent
 
-    def find_variable_value(self, varname, line):
+    def find_variable_value(self, varname, line, print_function=debug):
         val = None
-        debug('SCL:%i:Looking for variable %s'%(line, varname,))
+        print_function('SCL:%i:Looking for variable %s'%(line, varname,))
 
         for f in reversed(self.stack):
             try:
@@ -203,7 +224,7 @@ class SCL:
             except:
                 pass
             else:
-                debug("Found value %s"%(val,))
+                print_function("Found value %s"%(val,))
                 return val
         raise UnknownVariableError(varname, line)
 
@@ -274,12 +295,14 @@ class SCL:
         self.stack.pop()
 
     def parse_expr(self, e):
-        debug('Parse expr %s'%(e,))
+        debug_expr('Parse expr %s'%(e,))
         if 'type' not in e:
             raise UnhandledCaseError('type is not set: %s'%(e,))
         t = e['type']
-        debug("%i:%s"%(e['line'],t))
+        debug_expr("%i:%s"%(e['line'],t))
         if t=='expr_number':
+            return e['val']
+        if t=='expr_string':
             return e['val']
         elif t=='expr_bool':
             return e['val']
@@ -293,7 +316,7 @@ class SCL:
             op = e['val'][2]
             e1num=self.parse_expr(e1)
             e2num=self.parse_expr(e2)
-            debug('%s %s %s'%(e1num, op, e2num))
+            debug_expr('%s %s %s'%(e1num, op, e2num))
             if op == '+':
                 return e1num+e2num
             elif op == '-':
@@ -322,34 +345,66 @@ class SCL:
             if (isinstance(en, list)):
                 return [-v for v in en]
             return -en
+        elif t=='expr_terop':
+            condition = e['val']['condition']
+            true_branch = e['val']['true']
+            false_branch = e['val']['false']
+            condition=self.parse_expr(condition)
+            result = None
+            if (condition):
+                result=self.parse_expr(true_branch)
+            else:
+                result=self.parse_expr(false_branch)
+            return result
         elif e['type']=='expr_id':
             ev = e['val']
-            return self.find_variable_value(ev, e['line'])
+            return self.find_variable_value(ev, e['line'], debug_expr)
         elif e['type']=='array_list':
             arr = []
             for ev in e['val']:
                 arr.append(self.parse_expr(ev))
             return arr
+        elif e['type']=='array_range':
+            step = 1.0
+            if 'step' in e['val']:
+                step = self.parse_expr(e['val']['step'])
+            start = self.parse_expr(e['val']['start'])
+            end = self.parse_expr(e['val']['end'])
+            v = start
+            arr = [v]
+            diff = v-end
+            pdiff = diff
+            while (True):
+                v+=step
+                diff = v-end
+                if (diff/abs(diff)!=pdiff/abs(pdiff)):
+                    break
+                arr.append(v)
+                pdiff = diff
+                
+            debug("arr: %s"%(str(arr),))
+            #arr = [v for v in np.arange(start, end, step)]
+            return arr
         elif e['type']=='expr_call':
             self.push_stack()
             if e['id'] == 'sqrt':
-                self.parse_kwargs(e['id'], e['line'], sqrt_function_definition['args'], e['args'])
+                self.parse_kwargs(e['id'], e['line'], sqrt_function_definition['args'], e['args'], debug_expr)
                 top = self.stack[-1]
                 v = 0
                 if (top.has_variable('v', e['line'])):
-                    v = self.find_variable_value('v', e['line'])
-                debug("Call builtin sqrt(%f)"%(v,))
+                    v = self.find_variable_value('v', e['line'], debug_expr)
+                debug_expr("Call builtin sqrt(%f)"%(v,))
                 ret = math.sqrt(v)
             elif e['id'] == 'reverse':
-                self.parse_kwargs(e['id'], e['line'], reverse_function_definition['args'], e['args'])
+                self.parse_kwargs(e['id'], e['line'], reverse_function_definition['args'], e['args'], debug_expr)
                 top = self.stack[-1]
                 v = 0
                 if (top.has_variable('v', e['line'])):
-                    v = self.find_variable_value('v', e['line'])
+                    v = self.find_variable_value('v', e['line'], debug_expr)
                 rv = v[:]
                 rv.reverse()
                 ret = rv
-                debug("Call builtin reverse(%s)->(%s)"%(str(v),str(ret)))
+                debug_expr("Call builtin reverse(%s)->(%s)"%(str(v),str(ret)))
             elif e['id'] == 'concat':
                 #self.parse_kwargs(e['id'], e['line'], concat_function_definition['args'], e['args'])
                 top = self.stack[-1]
@@ -357,18 +412,18 @@ class SCL:
                 for i, a in enumerate(s['args']):
                     val = str(self.parse_expr(a))
                     ov+=val
-                debug("Call builtin concat %s"%(str(ov),))
+                debug_expr("Call builtin concat %s"%(str(ov),))
                 ret = ov
             else:
-                cbl = self.find_function(e['id'], e['line'])
-                debug('Found function %s'%(e['id'],))
-                self.parse_kwargs(e['id'], e['line'], cbl['args'], e['args'])
+                cbl = self.find_function(e['id'], e['line'], debug_expr)
+                debug_expr('Found function %s'%(e['id'],))
+                self.parse_kwargs(e['id'], e['line'], cbl['args'], e['args'], debug_expr)
                 ret = self.parse_expr(cbl['expression'])
-                debug('Function %s done'%(e['id']))
+                debug_expr('Function %s done'%(e['id']))
             self.pop_stack()
             return ret
         elif e['type']=='array_access':
-            val=self.find_variable_value(e['id'], e['line'])
+            val=self.find_variable_value(e['id'], e['line'], debug_expr)
             idx=self.parse_expr(e['index'])
             return val[int(idx)]
         else:
@@ -415,12 +470,12 @@ class SCL:
             arg_list.append(argid)
         return def_vals, arg_list, positional
 
-    def parse_kwargs(self, name, line, args_definition, args):
-        debug('kwargs args: %s'%(str(args),))
+    def parse_kwargs(self, name, line, args_definition, args, print_function=debug):
+        print_function('kwargs args: %s'%(str(args),))
         self.check_kwargs_definition(args_definition)
         self.check_kwargs(args)
         def_vals, arg_list, positional = self.get_args_list(args_definition)
-        debug('defvals: %s, arglist: %s, positional: %i'%(def_vals, arg_list, positional))
+        print_function('defvals: %s, arglist: %s, positional: %i'%(def_vals, arg_list, positional))
         if (positional > len(args)):
             raise SyntaxError("%s takes %i positional arguments, but %i arguments supplied"%(name, positional, len(args)), line)
         if (len(args)>len(args_definition)):
@@ -429,12 +484,12 @@ class SCL:
         position = 0
         for a in args:
             if a['type'] != 'expr_assign':
-                debug('assign: %s'%(str(a),))
+                print_function('assign: %s'%(str(a),))
                 self.set_variable(arg_list[position], self.parse_expr(a), a['line'])
             else:
                 self.set_variable(a['id'], self.parse_expr(a['val']), a['line'])
             position+=1
-        debug('kwargs args: %s'%(args,))
+        print_function('kwargs args: %s'%(args,))
         if (def_vals!=None):
             for k,v in def_vals.items():
                 if (not top.has_variable(k, line)):
@@ -473,7 +528,7 @@ class SCL:
                     else:
                         # todo: rewrite
                         # with extrude(l):
-                        self.push_context(SCLExtrude)
+                        self.push_context(SCLExtrude, get_inc_name("linear_extrude"))
                         self.parse_block(s['block'])
                         self.context.linear_extrude(l)
                         self.pop_context()
@@ -487,11 +542,40 @@ class SCL:
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
-                        self.push_context(SCLProfile2)
+                        self.push_context(SCLProfile2, get_inc_name("profile2"))
                         self.parse_block(s['block'])
                         self.pop_context()
                     debug("Leave profile")
                     self.pop_stack()
+                elif s['id'] == 'union':
+                    self.push_stack()
+                    #self.parse_kwargs(s['id'], s['line'], union_module_definition['args'], s['args'])
+                    top = self.stack[-1]
+
+                    debug("Call union()")
+                    if debug_parser:
+                        self.parse_block(s['block'])
+                    else:
+                        self.push_context(SCLUnion, get_inc_name("union"))
+                        self.parse_block(s['block'])
+                        self.active_context.union()
+                        self.pop_context()
+                    debug("Leave union")
+                    self.pop_stack()
+                elif s['id'] == 'difference':
+                    self.push_stack()
+                    top = self.stack[-1]
+                    debug("Call difference()")
+                    if debug_parser:
+                        self.parse_block(s['block'])
+                    else:
+                        self.push_context(SCLDifference, get_inc_name("difference"))
+                        self.parse_block(s['block'])
+                        self.active_context.difference()
+                        self.pop_context()
+                    debug("Leave difference")
+                    self.pop_stack()
+
                 elif s['id']=='rotate':
                     debug("Rotate")
                     self.push_stack()
@@ -503,18 +587,20 @@ class SCL:
                         l = (len(v) if (len(v)<len(v_)) else (len(v_)))
                         for i in range(l):
                             v[i] = v_[i]
-                    debug("Call builtin rotate(%f,%f,%f)"%(v[0],v[1],v[2]))
+                    self.push_context(SCLPart3, get_inc_name("rotate"))
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
                         self.parse_block(s['block'])
-                        self.context.rotate(v[0],v[1],v[2])
-                    debug("Leave rotate")
+                        debug("Call builtin rotate(%f,%f,%f)"%(v[0],v[1],v[2]))
+                        self.active_context.rotate(v[0],v[1],v[2])
+                    debug("Leave rotate [%s]"%(self.active_context.name))
+                    self.pop_context()
                     self.pop_stack()
                 elif s['id']=='translate':
                     debug("translate")
                     self.push_stack()
-                    self.parse_kwargs(s['id'], s['line'], rotate_module_definition['args'], s['args'])
+                    self.parse_kwargs(s['id'], s['line'], translate_module_definition['args'], s['args'])
                     top = self.stack[-1]
                     v = [0,0,0]
                     if (top.has_variable('v', s['line'])):
@@ -522,8 +608,7 @@ class SCL:
                         l = (len(v) if (len(v)<len(v_)) else (len(v_)))
                         for i in range(l):
                             v[i] = v_[i]
-                    self.push_context(SCLPart3)
-                    self.active_context.set_name(get_inc_name("translate"))
+                    self.push_context(SCLPart3, get_inc_name("translate"))
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
@@ -531,6 +616,35 @@ class SCL:
                         debug("Call builtin translate(%f,%f,%f) line: %i [%s]"%(v[0],v[1],v[2], s['line'], self.active_context.name))
                         self.active_context.translate(v[0],v[1],v[2])
                     debug("Leave translate [%s]"%(self.active_context.name))
+                    self.pop_context()
+                    self.pop_stack()
+                elif s['id']=='color':
+                    debug("color")
+                    self.push_stack()
+                    self.parse_kwargs(s['id'], s['line'], color_module_definition['args'], s['args'])
+                    top = self.stack[-1]
+                    v = [0,0,0]
+                    if (top.has_variable('v', s['line'])):
+                        v_ = self.find_variable_value('v', s['line'])
+                        l = (len(v) if (len(v)<len(v_)) else (len(v_)))
+                        if type(v_) == list:
+                            for i in range(l):
+                                v[i] = v_[i]
+                        else:
+                            v = v_
+                    self.push_context(SCLPart3, get_inc_name("color"))
+                    if debug_parser:
+                        self.parse_block(s['block'])
+                    else:
+                        self.parse_block(s['block'])
+                        debug("type(v): %s"%(str(type(v)),))
+                        if type(v) == str:
+                            debug("Call builtin color(%s) line: %i [%s]"%(v, s['line'], self.active_context.name))
+                            self.active_context.color(color=v)
+                        else:
+                            debug("Call builtin color(%f,%f,%f) line: %i [%s]"%(v[0],v[1],v[2], s['line'], self.active_context.name))
+                            self.active_context.color(v[0],v[1],v[2])
+                    debug("Leave color [%s]"%(self.active_context.name))
                     self.pop_context()
                     self.pop_stack()
                 elif s['id']=='mirror':
@@ -544,15 +658,16 @@ class SCL:
                         l = (len(v) if (len(v)<len(v_)) else (len(v_)))
                         for i in range(l):
                             v[i] = v_[i]
-
+                    self.push_context(SCLPart3, get_inc_name("mirror"))
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
                         debug("Call builtin mirror(%f, %f, %f)"%(v[0],v[1], v[2]))
                         # todo: rewrite
-                        self.context.mirror(v[0], v[1], v[2])
                         self.parse_block(s['block'])
+                        self.active_context.mirror(v[0], v[1], v[2])
                     debug("Leave mirror")
+                    self.pop_context()
                     self.pop_stack()
                 else:
                     raise UnhandledCaseError('unknown builtin statement \"%s\"'%(s['id'],))
@@ -621,7 +736,7 @@ class SCL:
                     else:
                         pass
                     self.pop_stack()
-                if mid=='cube':
+                elif mid=='cube':
                     self.push_stack()
                     self.parse_kwargs(s['id'], s['line'], cube_module_definition['args'], s['args'])
                     top = self.stack[-1]
@@ -637,6 +752,30 @@ class SCL:
                     debug("Call builtin cube(%s, %s) line: %i"%(str(v), str(center), s['line']))
                     if not debug_parser:
                         self.active_context.cube(V3(v[0], v[1], v[2]), center)
+                    else:
+                        pass
+                    self.pop_stack()
+                elif mid=='cylinder':
+                    self.push_stack()
+                    self.parse_kwargs(s['id'], s['line'], cylinder_module_definition['args'], s['args'])
+                    top = self.stack[-1]
+                    r = 0.5
+                    d = 1.0
+                    h = 1.0
+                    center = False
+                    if (top.has_variable('center', s['line'])):
+                        center = self.find_variable_value('center', s['line'])
+                    if (top.has_variable('r', s['line'])):
+                        r = self.find_variable_value('r', s['line'])
+                    if (top.has_variable('d', s['line'])):
+                        d = self.find_variable_value('d', s['line'])
+                    if (top.has_variable('h', s['line'])):
+                        h = self.find_variable_value('h', s['line'])
+
+                    debug("args: %s"%(s['args'],))
+                    debug("Call builtin cylinder(r=%s, d=%s, h=%s, center=%s) line: %i"%(str(r), str(d), str(h), str(center), s['line']))
+                    if not debug_parser:
+                        self.active_context.cylinder(r, d, h, center)
                     else:
                         pass
                     self.pop_stack()
