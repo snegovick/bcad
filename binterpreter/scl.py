@@ -184,7 +184,7 @@ class SCL:
         filename, file_extension = os.path.splitext(path)
         if (file_extension == '.sck'):
             self.root = SCLProfile2(None)
-        if (file_extension == '.scp'):
+        if ((file_extension == '.scp') or (file_extension == '.scad')):
             self.root = SCLPart3(None)
         self.root.set_name("root")
 

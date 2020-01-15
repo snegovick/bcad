@@ -1,3 +1,6 @@
+from OCC.Core.AIS import AIS_ColoredShape, AIS_Line
+from OCC.Core.Geom import Geom_Line, Geom_Point
+from OCC.Core.Prs3d import Prs3d_LineAspect, Prs3d_Drawer
 from OCC.Core.gp import gp_Ax1, gp_Ax2, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec, gp_Pln, gp_Ax3
 from OCC.Core.ChFi2d import ChFi2d_AnaFilletAlgo
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_Transform, BRepBuilderAPI_MakeFace
@@ -5,9 +8,11 @@ from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakePrism, BRepPrimAPI_MakeCylinder
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse, BRepAlgoAPI_Cut
 from OCC.Extend.ShapeFactory import make_wire
 from OCC.Display.SimpleGui import init_display
+from OCC.Display.OCCViewer import rgb_color
 from OCC.Core.TopoDS import topods, TopoDS_Compound
 from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK
 from OCC.Core.Aspect import Aspect_Grid
+from OCC.Extend.TopologyUtils import TopologyExplorer
 
 from logging import debug, info, warning, error, critical
 
@@ -46,6 +51,27 @@ def get_inc_name(prefix):
         names[prefix]+=1
     return n
 
+def mk_colored_line(start, direction, color, linestyle, width):
+    line = Geom_Line(start, direction)
+    ais_line = AIS_Line(line)
+    
+    drawer = ais_line.Attributes()
+    aspect = Prs3d_LineAspect(color, linestyle, width)
+    drawer.SetLineAspect(aspect)
+    ais_line.SetAttributes(drawer)
+    return ais_line
+
+def axis():
+    center = gp_Pnt(0,0,0)
+    zd = gp_Dir(0,0,10000)
+    display.Context.Display(mk_colored_line(center, zd, rgb_color(0,0,1), 0, 1.0), False)
+
+    xd = gp_Dir(1,0,0)
+    display.Context.Display(mk_colored_line(center, xd, rgb_color(1,0,0), 0, 1.0), False)
+
+    yd = gp_Dir(0,1,0)
+    display.Context.Display(mk_colored_line(center, yd, rgb_color(0,1,0), 0, 1.0), False)
+
 def scl_init_display():
     global display
     global start_display
@@ -56,13 +82,16 @@ def scl_init_display():
     d = gp_Dir(0., 0., 1.)
     a = gp_Ax3(p, d)
 
-    display.GetViewer().SetPrivilegedPlane(a)
-    display.GetViewer().SetRectangularGridValues(0, 0, 1, 1, 0)
-    display.GetViewer().SetRectangularGridGraphicValues(100, 100, 0)
-    display.GetViewer().Grid().SetColors(Quantity_Color(Quantity_NOC_BLACK), Quantity_Color(Quantity_NOC_BLACK))
+    #display.GetViewer().SetPrivilegedPlane(a)
+    #display.GetViewer().SetRectangularGridValues(0, 0, 1, 1, 0)
+    #display.GetViewer().SetRectangularGridGraphicValues(100, 100, 0)
+    #display.GetViewer().Grid().SetColors(Quantity_Color(Quantity_NOC_BLACK), Quantity_Color(Quantity_NOC_BLACK))
 
-    display.GetViewer().ActivateGrid(0, 0)
+    #display.GetViewer().ActivateGrid(0, 0)
     display.View.SetBgGradientColors(Quantity_Color(Quantity_NOC_ANTIQUEWHITE), Quantity_Color(Quantity_NOC_ANTIQUEWHITE), 2, True)
+
+    axis()
+    
     display.Repaint()
 
 class V2:
@@ -152,7 +181,7 @@ class SCLContext(object):
         debug("Display SCLContext")
         for c in self.children:
             c = self.child.display()
-        display.FitAll()
+        #display.FitAll()
         start_display()
 
     def get_children(self):
@@ -198,19 +227,22 @@ class SCLPart3(SCLContext):
             axx = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(1., 0., 0.))
             a_trsf1 = gp_Trsf()
             a_trsf1.SetRotation(axx, math.radians(x))
-            trsf = trsf*a_trsf1
+            #trsf = trsf*a_trsf1
+            trsf = a_trsf1*trsf
 
         if (y!=0.0):
             axy = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(0., 1., 0.))
             a_trsf2 = gp_Trsf()
             a_trsf2.SetRotation(axy, math.radians(y))
-            trsf = trsf*a_trsf2
+            #trsf = trsf*a_trsf2
+            trsf = a_trsf2*trsf
 
         if (z!=0.0):
             axz = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(0., 0., 1.))
             a_trsf3 = gp_Trsf()
             a_trsf3.SetRotation(axz, math.radians(z))
-            trsf = trsf*a_trsf3
+            #trsf = trsf*a_trsf3
+            trsf = a_trsf3*trsf
 
         for c in self.children:
             c.propagate_trsf(trsf)
@@ -224,14 +256,15 @@ class SCLPart3(SCLContext):
             c.propagate_trsf(a_trsf)
 
     def mirror(self, x=0.0, y=0.0, z=0.0):
+        debug("mirror: %f, %f, %f"%(x,y,z))
         if (x==0 and y==0 and z==0):
             warning("Warning: no axis to mirror")
             return
         trsf = gp_Trsf()
         
         d = gp_Dir(x, y, z)
-        p = gp_Pnt()
-        trsf.SetMirror(gp_Ax1(p, d))
+        p = gp_Pnt(0,0,0)
+        trsf.SetMirror(gp_Ax2(p, d))
         for c in self.children:
             c.propagate_trsf(trsf)
 
@@ -281,7 +314,7 @@ class SCLPart3(SCLContext):
 
         if self.shape != None:
             self.shape.display()
-        display.FitAll()
+        #display.FitAll()
         if (self.parent == None):
             start_display()
 
@@ -365,7 +398,7 @@ class SCLProfile2(SCLContext):
         w = self.get_wire()
         if (w != None):
             display.DisplayShape(w)
-        display.FitAll()
+        #display.FitAll()
         start_display()
 
 class SCLExtrude(SCLContext):
