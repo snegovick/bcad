@@ -10,6 +10,10 @@ import math
 import argparse
 import traceback
 
+from OCC.Core.STEPControl import STEPControl_Writer
+from OCC.Core.Interface import Interface_Static_SetCVal
+from OCC.Core.IFSelect import IFSelect_RetDone
+
 from logging import debug, info, warning, error, critical
 import logging
 
@@ -162,9 +166,10 @@ class SCLFrame:
         self.modules[mname] = value
 
 class SCL:
-    def __init__(self, data=None, path=None, verbose=3):
+    def __init__(self, data=None, path=None, output_path=None, verbose=3):
         debug('SCL data: %s, path: %s'%(data, path))
-        scl_init_display()
+        if output_path == None:
+            scl_init_display()
         self.stack = [SCLFrame()]
         self.verbose = verbose
         if verbose == 0:
@@ -186,6 +191,15 @@ class SCL:
             self.root = SCLProfile2(None)
         if ((file_extension == '.scp') or (file_extension == '.scad')):
             self.root = SCLPart3(None)
+        else:
+            critical("Unknown file type %s"%(file_extension,))
+            exit(1)
+
+        step_writer = None
+        if output_path != None:
+            step_writer = STEPControl_Writer()
+            Interface_Static_SetCVal("write.step.schema", "AP203")
+            
         self.root.set_name("root")
 
         self.context = self.root
@@ -198,12 +212,18 @@ class SCL:
             critical("%s:%i Unknown expression: %s"%(self.path, pe.lineno, pe.message))
             if (self.verbose>=4):
                 traceback.print_exc()
-            exit(0)
+            exit(1)
         debug(json.dumps(slp.data, indent=2))
         for s in slp.data:
             self.parse_statement(s)
         debug("Display context")
-        self.context.display()
+        
+        self.context.display(step_writer)
+        
+        if output_path != None:
+            status = step_writer.Write(output_path)
+            if status != IFSelect_RetDone:
+                raise AssertionError("load failed")
 
     def push_context(self, ctx, name):
         n = ctx(self.active_context)
@@ -880,6 +900,7 @@ if __name__=="__main__":
     import sys
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', help='file to read', required=True, type=str)
+    parser.add_argument('--output', help='file to write', required=False, type=str)
     parser.add_argument('--verbose', help='Verbose level, when set to 0: print only critical errors, 4+: print all debug messages, 3: default', required=False, type=int, default=3)
     args = parser.parse_args()
-    scl = SCL(path=args.file, verbose=args.verbose)
+    scl = SCL(path=args.file, output_path=args.output, verbose=args.verbose)

@@ -12,6 +12,7 @@ from OCC.Display.OCCViewer import rgb_color
 from OCC.Core.TopoDS import topods, TopoDS_Compound
 from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK
 from OCC.Core.Aspect import Aspect_Grid
+from OCC.Core.STEPControl import STEPControl_AsIs
 from OCC.Extend.TopologyUtils import TopologyExplorer
 
 from logging import debug, info, warning, error, critical
@@ -77,7 +78,7 @@ def scl_init_display():
     global start_display
     global add_menu
     global add_functionto_menu
-    display, start_display, add_menu, add_functionto_menu = init_display()
+    display, start_display, add_menu, add_functionto_menu = init_display(backend_str='qt-pyqt5')
     p = gp_Pnt(0., 0., 0.)
     d = gp_Dir(0., 0., 1.)
     a = gp_Ax3(p, d)
@@ -177,12 +178,12 @@ class SCLContext(object):
         for c in self.children:
             c.propagate_trsf(trsf)
 
-    def display(self):
+    def display(self, writer=None):
         debug("Display SCLContext")
         for c in self.children:
-            c = self.child.display()
-        #display.FitAll()
-        start_display()
+            c = self.child.display(writer)
+        if (writer == None):
+            start_display()
 
     def get_children(self):
         children = []
@@ -206,8 +207,11 @@ class SCLShape(object):
     def transform_shape(self):
         self.shape = BRepBuilderAPI_Transform(self.shape, self.trsf, True).Shape()
 
-    def display(self):
-        display.DisplayShape(self.shape)
+    def display(self, writer=None):
+        if (writer != None):
+            writer.Transfer(self.shape, STEPControl_AsIs)
+        else:
+            display.DisplayShape(self.shape)
 
 class SCLPart3(SCLContext):
     def __init__(self, parent):
@@ -307,16 +311,16 @@ class SCLPart3(SCLContext):
         debug("Creating cylinder %s"%(name,))
         self.add_child_context(sclp)
 
-    def display(self):
+    def display(self, writer=None):
         debug("Display SCLPart3")
         for c in self.children:
-            c.display()
-
+            c.display(writer)
         if self.shape != None:
-            self.shape.display()
-        #display.FitAll()
-        if (self.parent == None):
-            start_display()
+            self.shape.display(writer)
+
+        if (writer == None):
+            if (self.parent == None):
+                start_display()
 
 class SCLProfile2(SCLContext):
     def __init__(self, parent):
@@ -393,13 +397,14 @@ class SCLProfile2(SCLContext):
             self.face = BRepBuilderAPI_MakeFace(self.get_wire())
         return self.face
 
-    def display(self):
+    def display(self, writer=None):
         debug("Display SCLProfile2")
         w = self.get_wire()
         if (w != None):
-            display.DisplayShape(w)
-        #display.FitAll()
-        start_display()
+            display.DisplayShape(w, writer)
+
+        if (writer == None):
+            start_display()
 
 class SCLExtrude(SCLContext):
     def __init__(self, parent):
@@ -411,9 +416,10 @@ class SCLExtrude(SCLContext):
         prism_vec = gp_Vec(0, 0, height)
         self.body = BRepPrimAPI_MakePrism(f.Face(), prism_vec)
 
-    def display(self):
+    def display(self, writer=None):
         debug("Display SCLExtrude")
-        display.DisplayShape(self.body.Shape())
+        if (writer == None):
+            display.DisplayShape(self.body.Shape())
 
 class SCLUnion(SCLPart3):
     def __init__(self, parent):
@@ -434,10 +440,10 @@ class SCLUnion(SCLPart3):
         self.shape = SCLShape(u)
         self.children = []
 
-    def display(self):
+    def display(self, writer=None):
         debug("Display SCLUnion")
         if self.shape != None:
-            self.shape.display()
+            self.shape.display(writer)
 
 class SCLDifference(SCLPart3):
     def __init__(self, parent):
@@ -459,9 +465,7 @@ class SCLDifference(SCLPart3):
         self.shape = SCLShape(f)
         self.children = []
 
-    def display(self):
+    def display(self, writer=None):
         debug("Display SCLUnion")
         if self.shape != None:
-            self.shape.display()
-
-            
+            self.shape.display(writer)
