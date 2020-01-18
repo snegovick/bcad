@@ -6,14 +6,15 @@ from OCC.Core.ChFi2d import ChFi2d_AnaFilletAlgo
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_Transform, BRepBuilderAPI_MakeFace
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakePrism, BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeBox
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse, BRepAlgoAPI_Cut
-from OCC.Extend.ShapeFactory import make_wire
-from OCC.Display.SimpleGui import init_display
-from OCC.Display.OCCViewer import rgb_color
 from OCC.Core.TopoDS import topods, TopoDS_Compound
 from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK, Quantity_NOC_MATRAGRAY, Quantity_NOC_YELLOW, Quantity_NOC_PERU
 from OCC.Core.Aspect import Aspect_Grid
 from OCC.Core.STEPControl import STEPControl_AsIs
+from OCC.Display.SimpleGui import init_display
+from OCC.Display.OCCViewer import rgb_color
 from OCC.Extend.TopologyUtils import TopologyExplorer
+from OCC.Extend.ShapeFactory import make_wire
+from OCC.Extend.DataExchange import read_step_file_with_names_colors
 
 from bcad.binterpreter.colorname_map import colorname_map
 from logging import debug, info, warning, error, critical
@@ -44,6 +45,7 @@ names = {
     "union": 0,
     "difference": 0,
     "profile2": 0,
+    "step": 0,
     "unknown": 0,
 }
 
@@ -211,7 +213,10 @@ class SCLShape(object):
     def color(self, color):
         debug("Trying to set color: %s"%(color,))
         if (type(color)==list):
-            self.shape_color = Quantity_Color(color[0], color[1], color[2], Quantity_TOC_RGB)
+            c = color[:]
+            if (len(c)<4):
+                c.append(1.0)
+            self.shape_color = Quantity_Color(c[0], c[1], c[2], Quantity_TOC_RGB)
         else:
             if (unstringify(color) not in colorname_map):
                 warning("Unknown color: %s"%(color,))
@@ -340,11 +345,14 @@ class SCLPart3(SCLContext):
         shapes_labels_colors = read_step_file_with_names_colors(filename)
         for shpt_lbl_color in shapes_labels_colors:
             label, c = shapes_labels_colors[shpt_lbl_color]
-            display.DisplayColoredShape(shpt_lbl_color, color=Quantity_Color(c.Red(),
-    	                                                                     c.Green(),
-    	                                                                     c.Blue(),
-    	                                                                     Quantity_TOC_RGB))
-
+            scls = SCLShape(shpt_lbl_color)
+            scls.color([c.Red(), c.Green(), c.Blue()])
+            sclp = SCLPart3(self)
+            sclp.set_shape(scls)
+            name = get_inc_name("step")
+            sclp.set_name(name)
+            debug("Creating step %s"%(name,))
+            self.add_child_context(sclp)
 
     def display(self, writer=None):
         debug("Display SCLPart3")

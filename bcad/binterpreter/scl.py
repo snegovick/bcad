@@ -24,7 +24,7 @@ def debug_expr(msg):
     if (debug_expr_en):
         debug(msg)
 
-from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLDifference, SCLPart3, scl_init_display, get_inc_name, Noval
+from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLDifference, SCLPart3, scl_init_display, get_inc_name, Noval, unstringify
 
 class UnknownVariableError(Exception):
     def __init__(self, varname, line):
@@ -72,6 +72,9 @@ mirror_module_definition = {'type': 'stat_module_definition', 'id': 'mirror', 'l
     ]}}]}
 fillet_module_definition = {'type': 'stat_module_definition', 'id': 'fillet', 'line': 0, 'args': [
     {'type': 'expr_assign', 'id': 'r', 'val': {'type': 'expr_number', 'val': 1.0, 'line': 0}, 'line': 0}
+]}
+import_step_module_definition = {'type': 'stat_module_definition', 'id': 'fillet', 'line': 0, 'args': [
+    {'type': 'expr_assign', 'id': 'filename', 'val': {'type': 'expr_string', 'val': "", 'line': 0}, 'line': 0}
 ]}
 line_module_definition = {'type': 'stat_module_definition', 'id': 'line', 'line': 0, 'args': [
     {'type': 'expr_assign', 'id': 'start', 'val': {'type': 'array_list', 'line': 0, 'val': [
@@ -794,6 +797,32 @@ class SCL:
                     else:
                         pass
                     self.pop_stack()
+                elif mid=='import_step':
+                    self.push_stack()
+                    self.parse_kwargs(s['id'], s['line'], import_step_module_definition['args'], s['args'])
+                    top = self.stack[-1]
+                    path = ""
+                    center = False
+                    if (top.has_variable('filename', s['line'])):
+                        path = self.find_variable_value('filename', s['line'])
+                        path = unstringify(path)
+                    debug("Call builtin import_step(%s) line: %i"%(str(path), s['line']))
+                    if not debug_parser:
+                        base_paths = [os.getcwd(), os.path.dirname(os.path.abspath(self.path))]
+                        paths = [os.path.join(bp, path) for bp in base_paths]
+                        file_path = None
+                        for p in paths:
+                            if os.path.isfile(p):
+                                debug("Using path %s"%(p,))
+                                file_path = p
+                                break
+                        if (file_path != None):
+                            self.active_context.import_step(file_path)
+                        else:
+                            warning("Failed to load file %s: file not found"%(fname,))
+                    else:
+                        pass
+                    self.pop_stack()
                 else:
                     critical("%s:%i Built-in module \"%s\" is not implemented"%(self.path, s['line'], mid))
                     exit(0)
@@ -843,7 +872,7 @@ class SCL:
                         self.parse_statement(statement)
                     self.pop_stack()
         elif t=='use':
-            path = s['path'][1:-1]
+            path = unstringify(s['path'])
             base_paths = [os.getcwd(), os.path.dirname(os.path.abspath(self.path))]
             paths = [os.path.join(bp, path) for bp in base_paths]
             file_found = False
@@ -866,7 +895,7 @@ class SCL:
             if (not file_found):
                 critical("%s:%i File %s not found"%(self.path, s['line'], path,))
         elif t=='include':
-            path = s['path'][1:-1]
+            path = unstringify(s['path'])
             base_paths = [os.getcwd(), os.path.dirname(os.path.abspath(self.path))]
             paths = [os.path.join(bp, path) for bp in base_paths]
             file_found = False

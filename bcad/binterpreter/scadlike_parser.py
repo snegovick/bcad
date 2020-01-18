@@ -152,6 +152,7 @@ class ScadLikeParser(ScadLikeLex):
                                 | FILLET parameters
                                 | CUBE parameters
                                 | CYLINDER parameters
+                                | IMPORT_STEP parameters
         '''
         p[0] = {'type': 'stat_call_builtin_modules', 'id': p[1], 'args': p[2], 'line': p.lineno(1)}
 

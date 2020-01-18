@@ -55,7 +55,7 @@ bsuite_reserved = {
     'line': 'LINE',
     'move': 'MOVE',
     'fillet': 'FILLET',
-    'cube': 'CUBE',
+    'import_step': 'IMPORT_STEP',
 }
 
 reserved.update(bsuite_reserved)
