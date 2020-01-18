@@ -657,13 +657,8 @@ class SCL:
                         self.parse_block(s['block'])
                     else:
                         self.parse_block(s['block'])
-                        debug("type(v): %s"%(str(type(v)),))
-                        if type(v) == str:
-                            debug("Call builtin color(%s) line: %i [%s]"%(v, s['line'], self.active_context.name))
-                            self.active_context.color(color=v)
-                        else:
-                            debug("Call builtin color(%f,%f,%f) line: %i [%s]"%(v[0],v[1],v[2], s['line'], self.active_context.name))
-                            self.active_context.color(v[0],v[1],v[2])
+                        debug("Call builtin color(%s) line: %i [%s]"%(str(v), s['line'], self.active_context.name))
+                        self.active_context.color(v)
                     debug("Leave color [%s]"%(self.active_context.name))
                     self.pop_context()
                     self.pop_stack()

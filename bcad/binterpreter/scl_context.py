@@ -10,11 +10,12 @@ from OCC.Extend.ShapeFactory import make_wire
 from OCC.Display.SimpleGui import init_display
 from OCC.Display.OCCViewer import rgb_color
 from OCC.Core.TopoDS import topods, TopoDS_Compound
-from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK
+from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK, Quantity_NOC_MATRAGRAY, Quantity_NOC_YELLOW, Quantity_NOC_PERU
 from OCC.Core.Aspect import Aspect_Grid
 from OCC.Core.STEPControl import STEPControl_AsIs
 from OCC.Extend.TopologyUtils import TopologyExplorer
 
+from bcad.binterpreter.colorname_map import colorname_map
 from logging import debug, info, warning, error, critical
 
 import math
@@ -25,6 +26,9 @@ add_menu = None
 add_functionto_menu = None
 
 Noval = 'no val'
+
+def unstringify(s):
+    return s[1:-1]
 
 def is_var_set(v):
     if (v!=None) and (v!=Noval):
@@ -89,7 +93,7 @@ def scl_init_display():
     #display.GetViewer().Grid().SetColors(Quantity_Color(Quantity_NOC_BLACK), Quantity_Color(Quantity_NOC_BLACK))
 
     #display.GetViewer().ActivateGrid(0, 0)
-    display.View.SetBgGradientColors(Quantity_Color(Quantity_NOC_ANTIQUEWHITE), Quantity_Color(Quantity_NOC_ANTIQUEWHITE), 2, True)
+    display.View.SetBgGradientColors(Quantity_Color(Quantity_NOC_ALICEBLUE), Quantity_Color(Quantity_NOC_ALICEBLUE), 2, True)
 
     axis()
     
@@ -178,6 +182,12 @@ class SCLContext(object):
         for c in self.children:
             c.propagate_trsf(trsf)
 
+    def propagate_color(self, color):
+        debug("Apply color to %s: %s"%(self.name, type(self),))
+        self.apply_color(color)
+        for c in self.children:
+            c.propagate_color(color)
+
     def display(self, writer=None):
         debug("Display SCLContext")
         for c in self.children:
@@ -196,6 +206,17 @@ class SCLShape(object):
     def __init__(self, shape):
         self.trsf = gp_Trsf()
         self.shape = shape
+        self.shape_color = Quantity_Color(Quantity_NOC_PERU)
+
+    def color(self, color):
+        debug("Trying to set color: %s"%(color,))
+        if (type(color)==list):
+            self.shape_color = Quantity_Color(color[0], color[1], color[2], Quantity_TOC_RGB)
+        else:
+            if (unstringify(color) not in colorname_map):
+                warning("Unknown color: %s"%(color,))
+            else:
+                self.shape_color = Quantity_Color(colorname_map[unstringify(color)])
 
     def get_shape(self):
         return self.shape
@@ -211,7 +232,7 @@ class SCLShape(object):
         if (writer != None):
             writer.Transfer(self.shape, STEPControl_AsIs)
         else:
-            display.DisplayShape(self.shape)
+            display.DisplayColoredShape(self.shape, self.shape_color)
 
 class SCLPart3(SCLContext):
     def __init__(self, parent):
@@ -220,6 +241,10 @@ class SCLPart3(SCLContext):
     
     def set_shape(self, shape):
         self.shape = shape
+
+    def apply_color(self, color):
+        if self.shape != None:
+            self.shape.color(color)
 
     def apply_trsf(self, trsf):
         if self.shape != None:
@@ -251,7 +276,6 @@ class SCLPart3(SCLContext):
         for c in self.children:
             c.propagate_trsf(trsf)
 
-
     def translate(self, x=0.0, y=0.0, z=0.0):
         v = gp_Vec(x, y, z)
         a_trsf = gp_Trsf()
@@ -272,8 +296,9 @@ class SCLPart3(SCLContext):
         for c in self.children:
             c.propagate_trsf(trsf)
 
-    def color(self, r=0.0, g=0.0, b=0.0, color=None):
-        pass
+    def color(self, v):
+        for c in self.children:
+            c.propagate_color(v)
 
     def cube(self, xyz, center=False):
         cube_shape = BRepPrimAPI_MakeBox(xyz.x(), xyz.y(), xyz.z()).Shape()
@@ -310,6 +335,16 @@ class SCLPart3(SCLContext):
         sclp.set_name(name)
         debug("Creating cylinder %s"%(name,))
         self.add_child_context(sclp)
+
+    def import_step(self, filename):
+        shapes_labels_colors = read_step_file_with_names_colors(filename)
+        for shpt_lbl_color in shapes_labels_colors:
+            label, c = shapes_labels_colors[shpt_lbl_color]
+            display.DisplayColoredShape(shpt_lbl_color, color=Quantity_Color(c.Red(),
+    	                                                                     c.Green(),
+    	                                                                     c.Blue(),
+    	                                                                     Quantity_TOC_RGB))
+
 
     def display(self, writer=None):
         debug("Display SCLPart3")
