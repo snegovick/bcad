@@ -6,25 +6,24 @@ from OCC.Core.ChFi2d import ChFi2d_AnaFilletAlgo
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_Transform, BRepBuilderAPI_MakeFace
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakePrism, BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeBox
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse, BRepAlgoAPI_Cut
-from OCC.Core.TopoDS import topods, TopoDS_Compound
-from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK, Quantity_NOC_MATRAGRAY, Quantity_NOC_YELLOW, Quantity_NOC_PERU
+from OCC.Core.TopoDS import topods, TopoDS_Compound, TopoDS_Solid
+from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK, Quantity_NOC_MATRAGRAY, Quantity_NOC_YELLOW, Quantity_NOC_PERU
 from OCC.Core.Aspect import Aspect_Grid
 from OCC.Core.STEPControl import STEPControl_AsIs
-from OCC.Display.SimpleGui import init_display
+#from OCC.Display.SimpleGui import init_display
 from OCC.Display.OCCViewer import rgb_color
 from OCC.Extend.TopologyUtils import TopologyExplorer
 from OCC.Extend.ShapeFactory import make_wire
 from OCC.Extend.DataExchange import read_step_file_with_names_colors
 
+from bcad.binterpreter.bgui import init_display
 from bcad.binterpreter.colorname_map import colorname_map
+from bcad.binterpreter.events import EVEnum, EventProcessor, ee, ep
+from bcad.binterpreter.singleton import Singleton
+
 from logging import debug, info, warning, error, critical
 
 import math
-
-display = None
-start_display = None
-add_menu = None
-add_functionto_menu = None
 
 Noval = 'no val'
 
@@ -58,48 +57,112 @@ def get_inc_name(prefix):
         names[prefix]+=1
     return n
 
-def mk_colored_line(start, direction, color, linestyle, width):
-    line = Geom_Line(start, direction)
-    ais_line = AIS_Line(line)
+class SCLDisplay:
+    def __init__(self):
+        self.display = None
+        self.start_display = None
+        self.add_menu = None
+        self.add_function_to_menu = None
+        self.scl_init_display()
     
-    drawer = ais_line.Attributes()
-    aspect = Prs3d_LineAspect(color, linestyle, width)
-    drawer.SetLineAspect(aspect)
-    ais_line.SetAttributes(drawer)
-    return ais_line
+    def mk_colored_line(self, start, direction, color, linestyle, width):
+        line = Geom_Line(start, direction)
+        ais_line = AIS_Line(line)
+        
+        drawer = ais_line.Attributes()
+        aspect = Prs3d_LineAspect(color, linestyle, width)
+        drawer.SetLineAspect(aspect)
+        ais_line.SetAttributes(drawer)
+        return ais_line
 
-def axis():
-    center = gp_Pnt(0,0,0)
-    zd = gp_Dir(0,0,10000)
-    display.Context.Display(mk_colored_line(center, zd, rgb_color(0,0,1), 0, 1.0), False)
+    def axis(self):
+        center = gp_Pnt(0,0,0)
+        zd = gp_Dir(0,0,10000)
+        self.display.Context.Display(self.mk_colored_line(center, zd, rgb_color(0,0,1), 0, 1.0), False)
+        
+        xd = gp_Dir(1,0,0)
+        self.display.Context.Display(self.mk_colored_line(center, xd, rgb_color(1,0,0), 0, 1.0), False)
+        
+        yd = gp_Dir(0,1,0)
+        self.display.Context.Display(self.mk_colored_line(center, yd, rgb_color(0,1,0), 0, 1.0), False)
 
-    xd = gp_Dir(1,0,0)
-    display.Context.Display(mk_colored_line(center, xd, rgb_color(1,0,0), 0, 1.0), False)
+    def perspective(self, event=None):
+        self.display.SetPerspectiveProjection()
+        self.display.FitAll()
 
-    yd = gp_Dir(0,1,0)
-    display.Context.Display(mk_colored_line(center, yd, rgb_color(0,1,0), 0, 1.0), False)
+    def orthographic(self, event=None):
+        self.display.SetOrthographicProjection()
+        self.display.FitAll()
 
-def scl_init_display():
-    global display
-    global start_display
-    global add_menu
-    global add_functionto_menu
-    display, start_display, add_menu, add_functionto_menu = init_display(backend_str='qt-pyqt5')
-    p = gp_Pnt(0., 0., 0.)
-    d = gp_Dir(0., 0., 1.)
-    a = gp_Ax3(p, d)
+    def top(self, event=None):
+        self.display.View_Top()
+        self.display.FitAll()
 
-    #display.GetViewer().SetPrivilegedPlane(a)
-    #display.GetViewer().SetRectangularGridValues(0, 0, 1, 1, 0)
-    #display.GetViewer().SetRectangularGridGraphicValues(100, 100, 0)
-    #display.GetViewer().Grid().SetColors(Quantity_Color(Quantity_NOC_BLACK), Quantity_Color(Quantity_NOC_BLACK))
+    def bottom(self, event=None):
+        self.display.View_Bottom()
+        self.display.FitAll()
 
-    #display.GetViewer().ActivateGrid(0, 0)
-    display.View.SetBgGradientColors(Quantity_Color(Quantity_NOC_ALICEBLUE), Quantity_Color(Quantity_NOC_ALICEBLUE), 2, True)
+    def left(self, event=None):
+        self.display.View_Left()
+        self.display.FitAll()
 
-    axis()
-    
-    display.Repaint()
+    def right(self, event=None):
+        self.display.View_Right()
+        self.display.FitAll()
+
+    def front(self, event=None):
+        self.display.View_Front()
+        self.display.FitAll()
+
+    def rear(self, event=None):
+        self.display.View_Rear()
+        self.display.FitAll()
+
+    def isometric(self, event=None):
+        self.display.View_Iso()
+        self.display.FitAll()
+
+    def reset(self, event=None):
+        #self.display.Context.CloseAllContexts()
+        self.display.Context.RemoveAll(True)
+        self.axis()
+        self.display.Repaint()
+
+    def periodic(self):
+        ep.process()
+
+    def scl_init_display(self):
+        self.display, self.start_display, self.add_menu, self.add_function_to_menu = init_display(size='fullscreen', periodic_callback=self.periodic, period=1)
+        
+        self.add_menu('View')
+        self.add_function_to_menu('View', self.top)
+        self.add_function_to_menu('View', self.bottom)
+        self.add_function_to_menu('View', self.left)
+        self.add_function_to_menu('View', self.right)
+        self.add_function_to_menu('View', self.front)
+        self.add_function_to_menu('View', self.rear)
+        self.add_function_to_menu('View', self.isometric)
+        self.add_function_to_menu('View', self.perspective)
+        self.add_function_to_menu('View', self.orthographic)
+        self.add_function_to_menu('View', self.reset)
+        
+        
+        p = gp_Pnt(0., 0., 0.)
+        d = gp_Dir(0., 0., 1.)
+        a = gp_Ax3(p, d)
+        
+        #display.GetViewer().SetPrivilegedPlane(a)
+        #display.GetViewer().SetRectangularGridValues(0, 0, 1, 1, 0)
+        #display.GetViewer().SetRectangularGridGraphicValues(100, 100, 0)
+        #display.GetViewer().Grid().SetColors(Quantity_Color(Quantity_NOC_BLACK), Quantity_Color(Quantity_NOC_BLACK))
+        
+        #display.GetViewer().ActivateGrid(0, 0)
+        self.display.View.SetBgGradientColors(Quantity_Color(Quantity_NOC_ALICEBLUE), Quantity_Color(Quantity_NOC_ALICEBLUE), 2, True)
+        #display.display_graduated_trihedron()
+        
+        self.axis()
+        
+        self.display.Repaint()
 
 class V2:
     def __init__(self, x, y):
@@ -195,7 +258,8 @@ class SCLContext(object):
         for c in self.children:
             c = self.child.display(writer)
         if (writer == None):
-            start_display()
+            Singleton.sd.display.FitAll()
+            Singleton.sd.start_display()
 
     def get_children(self):
         children = []
@@ -216,7 +280,7 @@ class SCLShape(object):
             c = color[:]
             if (len(c)<4):
                 c.append(1.0)
-            self.shape_color = Quantity_Color(c[0], c[1], c[2], Quantity_TOC_RGB)
+            self.shape_color = rgb_color(c[0], c[1], c[2])
         else:
             if (unstringify(color) not in colorname_map):
                 warning("Unknown color: %s"%(color,))
@@ -237,7 +301,7 @@ class SCLShape(object):
         if (writer != None):
             writer.Transfer(self.shape, STEPControl_AsIs)
         else:
-            display.DisplayColoredShape(self.shape, self.shape_color)
+            Singleton.sd.display.DisplayColoredShape(self.shape, self.shape_color)
 
 class SCLPart3(SCLContext):
     def __init__(self, parent):
@@ -345,6 +409,10 @@ class SCLPart3(SCLContext):
         shapes_labels_colors = read_step_file_with_names_colors(filename)
         for shpt_lbl_color in shapes_labels_colors:
             label, c = shapes_labels_colors[shpt_lbl_color]
+            debug("shpt_lbl_color: %s"%(str(shpt_lbl_color),))
+            if (type(shpt_lbl_color) != TopoDS_Solid):
+                debug("skip")
+                continue
             scls = SCLShape(shpt_lbl_color)
             scls.color([c.Red(), c.Green(), c.Blue()])
             sclp = SCLPart3(self)
@@ -363,7 +431,8 @@ class SCLPart3(SCLContext):
 
         if (writer == None):
             if (self.parent == None):
-                start_display()
+                Singleton.sd.display.FitAll()
+                Singleton.sd.start_display()
 
 class SCLProfile2(SCLContext):
     def __init__(self, parent):
@@ -444,10 +513,11 @@ class SCLProfile2(SCLContext):
         debug("Display SCLProfile2")
         w = self.get_wire()
         if (w != None):
-            display.DisplayShape(w, writer)
+            Singleton.sd.display.DisplayShape(w, writer)
 
         if (writer == None):
-            start_display()
+            Singleton.sd.display.FitAll()
+            Singleton.sd.start_display()
 
 class SCLExtrude(SCLContext):
     def __init__(self, parent):
@@ -462,7 +532,7 @@ class SCLExtrude(SCLContext):
     def display(self, writer=None):
         debug("Display SCLExtrude")
         if (writer == None):
-            display.DisplayShape(self.body.Shape())
+            Singleton.sd.display.DisplayShape(self.body.Shape())
 
 class SCLUnion(SCLPart3):
     def __init__(self, parent):

@@ -125,7 +125,7 @@ class ScadLikeParser(ScadLikeLex):
     def p_expression_bool(self, p):
         '''expression : TRUE
                       | FALSE'''
-        p[0] = {'type': 'expr_bool', 'val': bool(p[1]), 'line': p.lineno(1)}
+        p[0] = {'type': 'expr_bool', 'val': (True if p[1]=='true' else False), 'line': p.lineno(1)}
 
     def p_expression_name(self, p):
         'expression : ID'
@@ -246,7 +246,7 @@ class ScadLikeParser(ScadLikeLex):
         '''if_cond : IF LPAREN expression RPAREN action_child_block
                    | IF LPAREN expression RPAREN action_child_block ELSE action_child_block'''
         blocks = [p[5]]
-        if len(p)>5:
+        if len(p)>6:
             blocks.append(p[7])
         p[0] = {'type': 'stat_if', 'condition': p[3], 'blocks': blocks, 'line': p.lineno(1)}
 

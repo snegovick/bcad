@@ -17,6 +17,10 @@ from OCC.Core.IFSelect import IFSelect_RetDone
 from logging import debug, info, warning, error, critical
 import logging
 
+
+from bcad.binterpreter.events import EVEnum, EventProcessor, ee, ep
+from bcad.binterpreter.singleton import Singleton
+
 debug_parser=False
 debug_expr_en = False
 
@@ -24,7 +28,7 @@ def debug_expr(msg):
     if (debug_expr_en):
         debug(msg)
 
-from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLDifference, SCLPart3, scl_init_display, get_inc_name, Noval, unstringify
+from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLDifference, SCLPart3, get_inc_name, Noval, unstringify
 
 class UnknownVariableError(Exception):
     def __init__(self, varname, line):
@@ -171,8 +175,11 @@ class SCLFrame:
 class SCL:
     def __init__(self, data=None, path=None, output_path=None, verbose=3):
         debug('SCL data: %s, path: %s'%(data, path))
-        if output_path == None:
-            scl_init_display()
+        self.output_path = output_path
+        self.data = data
+        if self.output_path == None:
+            ep.push_event(ee.init_display, None)
+            ep.process()
         self.stack = [SCLFrame()]
         self.verbose = verbose
         if verbose == 0:
@@ -189,7 +196,13 @@ class SCL:
         self.debug=False
 
         self.path = path
-        filename, file_extension = os.path.splitext(path)
+
+    def reload_file(self):
+        self.stack = [SCLFrame()]
+        self.load_file()
+
+    def load_file(self):
+        filename, file_extension = os.path.splitext(self.path)
         if (file_extension == '.sck'):
             self.root = SCLProfile2(None)
         if ((file_extension == '.scp') or (file_extension == '.scad')):
@@ -199,7 +212,7 @@ class SCL:
             exit(1)
 
         step_writer = None
-        if output_path != None:
+        if self.output_path != None:
             step_writer = STEPControl_Writer()
             Interface_Static_SetCVal("write.step.schema", "AP203")
             
@@ -210,7 +223,8 @@ class SCL:
 
         slp = None
         try:
-            slp = ScadLikeParser(data=data, path=path, debug=self.debug)
+            slp = ScadLikeParser(data=self.data, path=self.path, debug=self.debug)
+            ep.push_event(ee.parse_file, self.path)
         except ParserError as pe:
             critical("%s:%i Unknown expression: %s"%(self.path, pe.lineno, pe.message))
             if (self.verbose>=4):
@@ -223,10 +237,11 @@ class SCL:
         
         self.context.display(step_writer)
         
-        if output_path != None:
+        if self.output_path != None:
             status = step_writer.Write(output_path)
             if status != IFSelect_RetDone:
                 raise AssertionError("load failed")
+
 
     def push_context(self, ctx, name):
         n = ctx(self.active_context)
@@ -349,6 +364,7 @@ class SCL:
             elif op == '/':
                 return e1num/e2num
             elif op == '==':
+                debug("Compare %s == %s -> %s"%((e1num), str(e2num), str(e1num==e2num)))
                 return e1num==e2num
             elif op == '!=':
                 return e1num!=e2num
@@ -529,10 +545,10 @@ class SCL:
         t = s['type']
         debug("%i:%s"%(s['line'],s['type']))
         if t=='stat_assign':
-            if use:
-                debug("Skip assignment because \"use\" is set")
-            else:
-                self.parse_expr(s['val'])
+            # if use:
+            #     debug("Skip assignment because \"use\" is set")
+            # else:
+            self.parse_expr(s['val'])
         elif t=='stat_builtin':
             if use:
                 debug("Skip builtin because \"use\" is set")
@@ -693,7 +709,7 @@ class SCL:
             if use:
                 debug("Skip call because \"use\" is set")
             else:
-                if s['id'] == 'print':
+                if (s['id'] == 'print') or (s['id'] == 'echo'):
                     top = self.stack[-1]
                     out = "PRINT[@"+str(s['line'])+']: '
                     for i, a in enumerate(s['args']):
@@ -882,8 +898,9 @@ class SCL:
                     parser = None
                     try:
                         parser = ScadLikeParser(data=None, path=p, debug=self.debug)
+                        ep.push_event(ee.parse_file, p)
                     except ParserError as pe:
-                        critical("%s:%i Unknown expression: %s"%(self.path, pe.lineno, pe.message))
+                        critical("%s:%i Use: unknown expression %s in file used at %s:%i"%(p, pe.lineno, pe.message, self.path, s['line']))
                         if (self.verbose>=4):
                             traceback.print_exc()
                         exit(0)
@@ -905,8 +922,9 @@ class SCL:
                     parser = None
                     try:
                         parser = ScadLikeParser(data=None, path=p, debug=self.debug)
+                        ep.push_event(ee.parse_file, p)
                     except ParserError as pe:
-                        critical("%s:%i Unknown expression: %s"%(self.path, pe.lineno, pe.message))
+                        critical("%s:%i Include: unknown expression %s in file included at %s:%i"%(p, pe.lineno, pe.message, self.path, s['line']))
                         if (self.verbose>=4):
                             traceback.print_exc()
                         exit(0)
@@ -921,10 +939,13 @@ class SCL:
             raise UnhandledCaseError('unknown statement \"%s\"'%(t,))
                 
 if __name__=="__main__":
+    print("enter the main")
     import sys
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', help='file to read', required=True, type=str)
     parser.add_argument('--output', help='file to write', required=False, type=str)
     parser.add_argument('--verbose', help='Verbose level, when set to 0: print only critical errors, 4+: print all debug messages, 3: default', required=False, type=int, default=3)
     args = parser.parse_args()
-    scl = SCL(path=args.file, output_path=args.output, verbose=args.verbose)
+    Singleton.scl = SCL(path=args.file, output_path=args.output, verbose=args.verbose)
+    ep.push_event(ee.main_start, args)
+    ep.process()

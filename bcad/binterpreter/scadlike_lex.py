@@ -43,7 +43,6 @@ reserved = {
     'translate': 'TRANSLATE',
     'if': 'IF',
     'else': 'ELSE',
-    'echo': 'ECHO',
     'use': 'USE',
     'include': 'INCLUDE',
     'function': 'FUNCTION',
