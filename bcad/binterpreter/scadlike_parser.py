@@ -153,6 +153,7 @@ class ScadLikeParser(ScadLikeLex):
                                 | CUBE parameters
                                 | CYLINDER parameters
                                 | IMPORT_STEP parameters
+                                | IMPORT_STL parameters
         '''
         p[0] = {'type': 'stat_call_builtin_modules', 'id': p[1], 'args': p[2], 'line': p.lineno(1)}
 
@@ -197,6 +198,7 @@ class ScadLikeParser(ScadLikeLex):
                            | UNION parameters action_child_block
                            | DIFFERENCE parameters action_child_block
                            | TRANSLATE parameters action_child_block
+                           | PROJECTION parameters action_child_block
                            | COLOR parameters action_child_block'''
         p[0] = {'type': 'stat_builtin', 'id': p[1], 'args': p[2], 'block': p[3], 'line': p.lineno(1)}
 

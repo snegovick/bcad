@@ -20,6 +20,9 @@ import logging
 
 from bcad.binterpreter.events import EVEnum, EventProcessor, ee, ep
 from bcad.binterpreter.singleton import Singleton
+from bcad.binterpreter.scl_writer import SCLSTLWriter, SCLSTEPWriter
+from bcad.binterpreter.scl_util import Noval, unstringify
+from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLDifference, SCLProjection, SCLPart3, get_inc_name
 
 debug_parser=False
 debug_expr_en = False
@@ -28,7 +31,6 @@ def debug_expr(msg):
     if (debug_expr_en):
         debug(msg)
 
-from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLDifference, SCLPart3, get_inc_name, Noval, unstringify
 
 class UnknownVariableError(Exception):
     def __init__(self, varname, line):
@@ -78,6 +80,9 @@ fillet_module_definition = {'type': 'stat_module_definition', 'id': 'fillet', 'l
     {'type': 'expr_assign', 'id': 'r', 'val': {'type': 'expr_number', 'val': 1.0, 'line': 0}, 'line': 0}
 ]}
 import_step_module_definition = {'type': 'stat_module_definition', 'id': 'fillet', 'line': 0, 'args': [
+    {'type': 'expr_assign', 'id': 'filename', 'val': {'type': 'expr_string', 'val': "", 'line': 0}, 'line': 0}
+]}
+import_stl_module_definition = {'type': 'stat_module_definition', 'id': 'fillet', 'line': 0, 'args': [
     {'type': 'expr_assign', 'id': 'filename', 'val': {'type': 'expr_string', 'val': "", 'line': 0}, 'line': 0}
 ]}
 line_module_definition = {'type': 'stat_module_definition', 'id': 'line', 'line': 0, 'args': [
@@ -202,19 +207,22 @@ class SCL:
         self.load_file()
 
     def load_file(self):
-        filename, file_extension = os.path.splitext(self.path)
-        if (file_extension == '.sck'):
+        filename, ext = os.path.splitext(self.path)
+        if (ext == '.sck'):
             self.root = SCLProfile2(None)
-        if ((file_extension == '.scp') or (file_extension == '.scad')):
+        if ((ext == '.scp') or (ext == '.scad')):
             self.root = SCLPart3(None)
         else:
-            critical("Unknown file type %s"%(file_extension,))
+            critical("Unknown file type %s"%(ext,))
             exit(1)
 
-        step_writer = None
+        writer = None
         if self.output_path != None:
-            step_writer = STEPControl_Writer()
-            Interface_Static_SetCVal("write.step.schema", "AP203")
+            filename, ext = os.path.splitext(self.output_path)
+            if (ext == '.step'):
+                writer = SCLSTEPWriter()
+            elif (ext == '.stl'):
+                writer = SCLSTLWriter()
             
         self.root.set_name("root")
 
@@ -235,13 +243,10 @@ class SCL:
             self.parse_statement(s)
         debug("Display context")
         
-        self.context.display(step_writer)
+        self.context.display(writer)
         
         if self.output_path != None:
-            status = step_writer.Write(output_path)
-            if status != IFSelect_RetDone:
-                raise AssertionError("load failed")
-
+            writer.Write(self.output_path)
 
     def push_context(self, ctx, name):
         n = ctx(self.active_context)
@@ -614,6 +619,19 @@ class SCL:
                         self.pop_context()
                     debug("Leave difference")
                     self.pop_stack()
+                elif s['id'] == 'projection':
+                    self.push_stack()
+                    top = self.stack[-1]
+                    debug("Call projection()")
+                    if debug_parser:
+                        self.parse_block(s['block'])
+                    else:
+                        self.push_context(SCLProjection, get_inc_name("projection"))
+                        self.parse_block(s['block'])
+                        self.active_context.projection()
+                        self.pop_context()
+                    debug("Leave projection")
+                    self.pop_stack()
 
                 elif s['id']=='rotate':
                     debug("Rotate")
@@ -834,6 +852,32 @@ class SCL:
                                 break
                         if (file_path != None):
                             self.active_context.import_step(file_path)
+                        else:
+                            warning("Failed to load file %s: file not found"%(fname,))
+                    else:
+                        pass
+                    self.pop_stack()
+                elif mid=='import_stl':
+                    self.push_stack()
+                    self.parse_kwargs(s['id'], s['line'], import_stl_module_definition['args'], s['args'])
+                    top = self.stack[-1]
+                    path = ""
+                    center = False
+                    if (top.has_variable('filename', s['line'])):
+                        path = self.find_variable_value('filename', s['line'])
+                        path = unstringify(path)
+                    debug("Call builtin import_stl(%s) line: %i"%(str(path), s['line']))
+                    if not debug_parser:
+                        base_paths = [os.getcwd(), os.path.dirname(os.path.abspath(self.path))]
+                        paths = [os.path.join(bp, path) for bp in base_paths]
+                        file_path = None
+                        for p in paths:
+                            if os.path.isfile(p):
+                                debug("Using path %s"%(p,))
+                                file_path = p
+                                break
+                        if (file_path != None):
+                            self.active_context.import_stl(file_path)
                         else:
                             warning("Failed to load file %s: file not found"%(fname,))
                     else:

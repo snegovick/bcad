@@ -55,6 +55,7 @@ bsuite_reserved = {
     'move': 'MOVE',
     'fillet': 'FILLET',
     'import_step': 'IMPORT_STEP',
+    'import_stl': 'IMPORT_STL',
 }
 
 reserved.update(bsuite_reserved)

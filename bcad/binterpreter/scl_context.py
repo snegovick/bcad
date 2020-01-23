@@ -1,6 +1,8 @@
 from OCC.Core.AIS import AIS_ColoredShape, AIS_Line
 from OCC.Core.Geom import Geom_Line, Geom_Point
-from OCC.Core.Prs3d import Prs3d_LineAspect, Prs3d_Drawer
+from OCC.Core.Prs3d import Prs3d_LineAspect, Prs3d_Drawer, Prs3d_Projector
+from OCC.Core.HLRBRep import HLRBRep_HLRToShape, HLRBRep_Algo
+from OCC.Core.HLRAlgo import HLRAlgo_Projector
 from OCC.Core.gp import gp_Ax1, gp_Ax2, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec, gp_Pln, gp_Ax3
 from OCC.Core.ChFi2d import ChFi2d_AnaFilletAlgo
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_Transform, BRepBuilderAPI_MakeFace
@@ -14,26 +16,19 @@ from OCC.Core.STEPControl import STEPControl_AsIs
 from OCC.Display.OCCViewer import rgb_color
 from OCC.Extend.TopologyUtils import TopologyExplorer
 from OCC.Extend.ShapeFactory import make_wire
-from OCC.Extend.DataExchange import read_step_file_with_names_colors
+from OCC.Extend.DataExchange import read_step_file_with_names_colors, read_stl_file
 
 from bcad.binterpreter.bgui import init_display
 from bcad.binterpreter.colorname_map import colorname_map
 from bcad.binterpreter.events import EVEnum, EventProcessor, ee, ep
 from bcad.binterpreter.singleton import Singleton
+from bcad.binterpreter.scl_shape import SCLShape
+from bcad.binterpreter.scl_util import Noval, is_var_set
 
 from logging import debug, info, warning, error, critical
 
 import math
 
-Noval = 'no val'
-
-def unstringify(s):
-    return s[1:-1]
-
-def is_var_set(v):
-    if (v!=None) and (v!=Noval):
-        return True
-    return False
 
 names = {
     "translate": 0,
@@ -43,8 +38,10 @@ names = {
     "linear_extrude": 0,
     "union": 0,
     "difference": 0,
+    "projection": 0,
     "profile2": 0,
     "step": 0,
+    "stl": 0,
     "unknown": 0,
 }
 
@@ -268,41 +265,6 @@ class SCLContext(object):
             children.extend(c.get_children())
         return children
 
-class SCLShape(object):
-    def __init__(self, shape):
-        self.trsf = gp_Trsf()
-        self.shape = shape
-        self.shape_color = Quantity_Color(Quantity_NOC_PERU)
-
-    def color(self, color):
-        debug("Trying to set color: %s"%(color,))
-        if (type(color)==list):
-            c = color[:]
-            if (len(c)<4):
-                c.append(1.0)
-            self.shape_color = rgb_color(c[0], c[1], c[2])
-        else:
-            if (unstringify(color) not in colorname_map):
-                warning("Unknown color: %s"%(color,))
-            else:
-                self.shape_color = Quantity_Color(colorname_map[unstringify(color)])
-
-    def get_shape(self):
-        return self.shape
-
-    def transform(self, trsf):
-        self.trsf = trsf
-        self.transform_shape()
-
-    def transform_shape(self):
-        self.shape = BRepBuilderAPI_Transform(self.shape, self.trsf, True).Shape()
-
-    def display(self, writer=None):
-        if (writer != None):
-            writer.Transfer(self.shape, STEPControl_AsIs)
-        else:
-            Singleton.sd.display.DisplayColoredShape(self.shape, self.shape_color)
-
 class SCLPart3(SCLContext):
     def __init__(self, parent):
         super().__init__(parent)
@@ -371,7 +333,13 @@ class SCLPart3(SCLContext):
 
     def cube(self, xyz, center=False):
         cube_shape = BRepPrimAPI_MakeBox(xyz.x(), xyz.y(), xyz.z()).Shape()
+            
         scls = SCLShape(cube_shape)
+        if (center):
+            debug("center cube")
+            trsf = gp_Trsf()
+            trsf.SetTranslation(gp_Vec(-xyz.x()/2.0, -xyz.y()/2.0, -xyz.z()/2.0))
+            scls.transform(trsf)
         sclp = SCLPart3(self)
         sclp.set_shape(scls)
         name = get_inc_name("cube")
@@ -421,6 +389,16 @@ class SCLPart3(SCLContext):
             sclp.set_name(name)
             debug("Creating step %s"%(name,))
             self.add_child_context(sclp)
+
+    def import_stl(self, filename):
+        stl_shp = read_stl_file(filename)
+        scls = SCLShape(stl_shp)
+        sclp = SCLPart3(self)
+        sclp.set_shape(scls)
+        name = get_inc_name("stl")
+        sclp.set_name(name)
+        debug("Creating stl %s"%(name,))
+        self.add_child_context(sclp)
 
     def display(self, writer=None):
         debug("Display SCLPart3")
@@ -580,5 +558,131 @@ class SCLDifference(SCLPart3):
 
     def display(self, writer=None):
         debug("Display SCLUnion")
+        if self.shape != None:
+            self.shape.display(writer)
+
+class SCLProjection(SCLPart3):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def projector(self, trsf):
+        p = Prs3d_Projector(False, 0.0, 0,0,0, 0,0,-1, 0,0,1).Projector()
+        return p
+
+    def projection(self):
+        children = self.get_children()
+        shapes = []
+        debug("children: %s"%(children,))
+        for c in children:
+            if c.shape != None:
+                shapes.append(c.shape.get_shape())
+        hlralgo = HLRBRep_Algo()
+        if len(shapes)>0:
+            for s in shapes:
+                hlralgo.Add(s)
+            self.children = []
+            trsf = gp_Trsf()
+            p = HLRAlgo_Projector(gp_Ax2(gp_Pnt(), gp_Dir(0, 0, 1)))
+            hlralgo.Projector(p)
+            hlralgo.Update()
+            hlralgo.Hide()
+            hlrtoshape = HLRBRep_HLRToShape(hlralgo)
+            vcompound = hlrtoshape.VCompound()
+            voutline = hlrtoshape.OutLineVCompound()
+            rg1linevcompound = hlrtoshape.Rg1LineVCompound()
+            rgnlinevcompound = hlrtoshape.RgNLineVCompound()
+            isolinevcompound = hlrtoshape.IsoLineVCompound()
+            hcompound = hlrtoshape.HCompound()
+            houtline = hlrtoshape.OutLineHCompound()
+            rg1linehcompound = hlrtoshape.Rg1LineHCompound()
+            rgnlinehcompound = hlrtoshape.RgNLineHCompound()
+            isolinehcompound = hlrtoshape.IsoLineHCompound()
+            debug("vcompound: %s"%(str(vcompound),))
+            debug("voutline: %s"%(str(voutline),))
+            debug("rg1linevcompound: %s"%(str(rg1linevcompound),))
+            debug("rgnlinevcompound: %s"%(str(rgnlinevcompound),))
+            debug("isolinevcompound: %s"%(str(isolinevcompound),))
+            debug("hcompound: %s"%(str(hcompound),))
+            debug("houtline: %s"%(str(houtline),))
+            debug("rg1linehcompound: %s"%(str(rg1linehcompound),))
+            debug("rgnlinehcompound: %s"%(str(rgnlinehcompound),))
+            debug("isolinehcompound: %s"%(str(isolinehcompound),))
+            name = get_inc_name("projection")
+            if (vcompound != None):
+                sclp = SCLPart3(self)
+                scls = SCLShape(vcompound)
+                scls.set_linestyle("main_projection")
+                sclp.set_shape(scls)
+                sclp.set_name(name+'vcompound')
+                self.add_child_context(sclp)
+            if (voutline != None):
+                sclp = SCLPart3(self)
+                scls = SCLShape(voutline)
+                scls.set_linestyle("main_projection")
+                sclp.set_shape(scls)
+                sclp.set_name(name+'voutline')
+                self.add_child_context(sclp)
+            if (rg1linevcompound != None):
+                sclp = SCLPart3(self)
+                scls = SCLShape(rg1linevcompound)
+                scls.set_linestyle("main_projection")
+                sclp.set_shape(scls)
+                sclp.set_name(name+'rg1linevcompound')
+                self.add_child_context(sclp)
+            if (rgnlinevcompound != None):
+                sclp = SCLPart3(self)
+                scls = SCLShape(rgnlinevcompound)
+                scls.set_linestyle("main_projection")
+                sclp.set_shape(scls)
+                sclp.set_name(name+'rgnlinecompound')
+                self.add_child_context(sclp)
+            if (isolinevcompound != None):
+                sclp = SCLPart3(self)
+                scls = SCLShape(isolinevcompound)
+                scls.set_linestyle("main_projection")
+                sclp.set_shape(scls)
+                sclp.set_name(name+'isolinevcompound')
+                self.add_child_context(sclp)
+            if (hcompound != None):           
+                sclp = SCLPart3(self)
+                scls = SCLShape(hcompound)
+                scls.set_linestyle("hidden")
+                sclp.set_shape(scls)
+                sclp.set_name(name+'hcompound')
+                self.add_child_context(sclp)
+            if (houtline != None):
+                sclp = SCLPart3(self)
+                scls = SCLShape(houtline)
+                scls.set_linestyle("hidden")
+                sclp.set_shape(scls)
+                sclp.set_name(name+'houtline')
+                self.add_child_context(sclp)
+            if (rg1linehcompound != None):
+                sclp = SCLPart3(self)
+                scls = SCLShape(rg1linehcompound)
+                scls.set_linestyle("hidden")
+                sclp.set_shape(scls)
+                sclp.set_name(name+'rg1linehcompound')
+                self.add_child_context(sclp)
+            if (rgnlinehcompound != None):
+                sclp = SCLPart3(self)
+                scls = SCLShape(rgnlinehcompound)
+                scls.set_linestyle("hidden")
+                sclp.set_shape(scls)
+                sclp.set_name(name+'rgnlinehcompound')
+                self.add_child_context(sclp)
+            if (isolinehcompound != None):
+                sclp = SCLPart3(self)
+                scls = SCLShape(isolinehcompound)
+                scls.set_linestyle("hidden")
+                sclp.set_shape(scls)
+                sclp.set_name(name+'isolinehcompound')
+                self.add_child_context(sclp)
+
+
+    def display(self, writer=None):
+        debug("Display SCLProjection")
+        for c in self.children:
+            c.display(writer)
         if self.shape != None:
             self.shape.display(writer)
