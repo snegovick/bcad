@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ ! -e ext ]; then
+    echo "Creating ext directory"
+    mkdir ext
+fi
 pushd ext
 INSTALL_DIR="$(pwd)/usr"
 

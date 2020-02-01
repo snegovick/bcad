@@ -1,0 +1,5 @@
+[DEFAULT]
+Depends3: 
+XS-Python-Version: >= 3.6
+suite:
+Debian-Version:
