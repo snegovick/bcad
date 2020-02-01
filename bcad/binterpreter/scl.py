@@ -20,7 +20,7 @@ import logging
 
 from bcad.binterpreter.events import EVEnum, EventProcessor, ee, ep
 from bcad.binterpreter.singleton import Singleton
-from bcad.binterpreter.scl_writer import SCLSTLWriter, SCLSTEPWriter
+from bcad.binterpreter.scl_writer import SCLSTLWriter, SCLSTEPWriter, SCLDXFWriter
 from bcad.binterpreter.scl_util import Noval, unstringify
 from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLDifference, SCLProjection, SCLPart3, get_inc_name
 
@@ -30,7 +30,6 @@ debug_expr_en = False
 def debug_expr(msg):
     if (debug_expr_en):
         debug(msg)
-
 
 class UnknownVariableError(Exception):
     def __init__(self, varname, line):
@@ -213,8 +212,7 @@ class SCL:
         if ((ext == '.scp') or (ext == '.scad')):
             self.root = SCLPart3(None)
         else:
-            critical("Unknown file type %s"%(ext,))
-            exit(1)
+            warning("Unknown file type %s"%(ext,))
 
         writer = None
         if self.output_path != None:
@@ -223,6 +221,8 @@ class SCL:
                 writer = SCLSTEPWriter()
             elif (ext == '.stl'):
                 writer = SCLSTLWriter()
+            elif (ext == '.dxf'):
+                writer = SCLDXFWriter()
             
         self.root.set_name("root")
 
@@ -234,15 +234,15 @@ class SCL:
             slp = ScadLikeParser(data=self.data, path=self.path, debug=self.debug)
             ep.push_event(ee.parse_file, self.path)
         except ParserError as pe:
-            critical("%s:%i Unknown expression: %s"%(self.path, pe.lineno, pe.message))
+            warning("%s:%i Unknown expression: %s"%(self.path, pe.lineno, pe.message))
             if (self.verbose>=4):
                 traceback.print_exc()
-            exit(1)
-        debug(json.dumps(slp.data, indent=2))
-        for s in slp.data:
-            self.parse_statement(s)
+        else:
+            debug(json.dumps(slp.data, indent=2))
+            for s in slp.data:
+                self.parse_statement(s)
+
         debug("Display context")
-        
         self.context.display(writer)
         
         if self.output_path != None:
@@ -884,8 +884,7 @@ class SCL:
                         pass
                     self.pop_stack()
                 else:
-                    critical("%s:%i Built-in module \"%s\" is not implemented"%(self.path, s['line'], mid))
-                    exit(0)
+                    warning("%s:%i Built-in module \"%s\" is not implemented"%(self.path, s['line'], mid))
         elif t=='stat_function_definition':
             fid = s['id']
             l = s['line']
@@ -944,10 +943,9 @@ class SCL:
                         parser = ScadLikeParser(data=None, path=p, debug=self.debug)
                         ep.push_event(ee.parse_file, p)
                     except ParserError as pe:
-                        critical("%s:%i Use: unknown expression %s in file used at %s:%i"%(p, pe.lineno, pe.message, self.path, s['line']))
+                        warning("%s:%i Use: unknown expression %s in file used at %s:%i"%(p, pe.lineno, pe.message, self.path, s['line']))
                         if (self.verbose>=4):
                             traceback.print_exc()
-                        exit(0)
                     debug(json.dumps(parser.data, indent=2))
                     for s in parser.data:
                         self.parse_statement(s, use=True)
@@ -968,10 +966,9 @@ class SCL:
                         parser = ScadLikeParser(data=None, path=p, debug=self.debug)
                         ep.push_event(ee.parse_file, p)
                     except ParserError as pe:
-                        critical("%s:%i Include: unknown expression %s in file included at %s:%i"%(p, pe.lineno, pe.message, self.path, s['line']))
+                        warning("%s:%i Include: unknown expression %s in file included at %s:%i"%(p, pe.lineno, pe.message, self.path, s['line']))
                         if (self.verbose>=4):
                             traceback.print_exc()
-                        exit(0)
                     debug(json.dumps(parser.data, indent=2))
                     for s in parser.data:
                         self.parse_statement(s)

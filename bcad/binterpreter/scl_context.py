@@ -576,6 +576,9 @@ class SCLProjection(SCLPart3):
         for c in children:
             if c.shape != None:
                 shapes.append(c.shape.get_shape())
+        self.hlr_project(shapes)
+
+    def hlr_project(self, shapes):
         hlralgo = HLRBRep_Algo()
         if len(shapes)>0:
             for s in shapes:
@@ -647,6 +650,7 @@ class SCLProjection(SCLPart3):
                 sclp = SCLPart3(self)
                 scls = SCLShape(hcompound)
                 scls.set_linestyle("hidden")
+                scls.set_hidden(True)
                 sclp.set_shape(scls)
                 sclp.set_name(name+'hcompound')
                 self.add_child_context(sclp)
@@ -654,6 +658,7 @@ class SCLProjection(SCLPart3):
                 sclp = SCLPart3(self)
                 scls = SCLShape(houtline)
                 scls.set_linestyle("hidden")
+                scls.set_hidden(True)
                 sclp.set_shape(scls)
                 sclp.set_name(name+'houtline')
                 self.add_child_context(sclp)
@@ -661,6 +666,7 @@ class SCLProjection(SCLPart3):
                 sclp = SCLPart3(self)
                 scls = SCLShape(rg1linehcompound)
                 scls.set_linestyle("hidden")
+                scls.set_hidden(True)
                 sclp.set_shape(scls)
                 sclp.set_name(name+'rg1linehcompound')
                 self.add_child_context(sclp)
@@ -668,6 +674,7 @@ class SCLProjection(SCLPart3):
                 sclp = SCLPart3(self)
                 scls = SCLShape(rgnlinehcompound)
                 scls.set_linestyle("hidden")
+                scls.set_hidden(True)
                 sclp.set_shape(scls)
                 sclp.set_name(name+'rgnlinehcompound')
                 self.add_child_context(sclp)
@@ -675,6 +682,7 @@ class SCLProjection(SCLPart3):
                 sclp = SCLPart3(self)
                 scls = SCLShape(isolinehcompound)
                 scls.set_linestyle("hidden")
+                scls.set_hidden(True)
                 sclp.set_shape(scls)
                 sclp.set_name(name+'isolinehcompound')
                 self.add_child_context(sclp)

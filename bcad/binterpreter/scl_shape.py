@@ -17,6 +17,13 @@ class SCLShape(object):
         self.shape = shape
         self.shape_color = Quantity_Color(Quantity_NOC_PERU)
         self.style = "main"
+        self.hidden = False
+
+    def set_hidden(self, hidden):
+        self.hidden = hidden
+
+    def is_hidden(self):
+        return self.hidden
 
     def set_linestyle(self, name):
         if (name == "hidden"):
