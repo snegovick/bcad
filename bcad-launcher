@@ -1,0 +1,2 @@
+#!/bin/bash
+LD_LIBRARY_PATH=/usr/share/python3-bcad/ext/usr/lib:${LD_LIBRARY_PATH} PYTHONPATH=/usr/share/python3-bcad/ext/usr/lib/python3/site-packages:/usr/share/python3-bcad/ext/usr/lib/python3.7/site-packages:${PYTHONPATH} python3 -m bcad.binterpreter.scl "$@"
