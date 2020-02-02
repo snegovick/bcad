@@ -8,7 +8,7 @@ from setuptools import setup
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-data_files = [('/usr/bin', ['bcad-launcher'])]+[[os.path.join('/usr/share/python3-bcad/ext/usr', dp), [os.path.join(dp, f) for f in fn]] for dp, dn, fn in list(os.walk('ext/usr'))[1:]]
+data_files = [('/usr/bin', ['bcad-launcher'])]+[[os.path.join('/usr/share/python3-bcad/', dp), [os.path.join(dp, f) for f in fn]] for dp, dn, fn in list(os.walk('ext/usr'))[1:]]
 print(data_files)
 setup(
     name = "bcad",
