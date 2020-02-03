@@ -1,5 +1,5 @@
 [DEFAULT]
-Depends3: ezdxf
+Depends3: python3-ezdxf
 XS-Python-Version: >= 3.6
 suite:
 Debian-Version:
