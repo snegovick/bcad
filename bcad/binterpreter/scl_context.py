@@ -366,6 +366,11 @@ class SCLPart3(SCLContext):
         ax = gp_Ax2(gp_Pnt(0,0,0), gp_Dir(0,0,1))
         s = BRepPrimAPI_MakeCylinder(ax, nr, nh).Shape()
         scls = SCLShape(s)
+        if (center):
+            debug("center cylinder")
+            trsf = gp_Trsf()
+            trsf.SetTranslation(gp_Vec(0, 0, -h/2.0))
+            scls.transform(trsf)
         sclp = SCLPart3(self)
         sclp.set_shape(scls)
         name = get_inc_name("cylinder")

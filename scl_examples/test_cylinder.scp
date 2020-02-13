@@ -1,0 +1,2 @@
+translate([-3,0,0]) cylinder(d=1, h=5);
+translate([3,0,0]) cylinder(d=1, h=5, center=true);
