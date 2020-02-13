@@ -6,7 +6,7 @@ from OCC.Core.HLRAlgo import HLRAlgo_Projector
 from OCC.Core.gp import gp_Ax1, gp_Ax2, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec, gp_Pln, gp_Ax3
 from OCC.Core.ChFi2d import ChFi2d_AnaFilletAlgo
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_Transform, BRepBuilderAPI_MakeFace
-from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakePrism, BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeBox
+from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakePrism, BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeCone, BRepPrimAPI_MakeBox
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse, BRepAlgoAPI_Cut
 from OCC.Core.TopoDS import topods, TopoDS_Compound, TopoDS_Solid
 from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK, Quantity_NOC_MATRAGRAY, Quantity_NOC_YELLOW, Quantity_NOC_PERU
@@ -347,24 +347,39 @@ class SCLPart3(SCLContext):
         debug("Creating cube %s"%(name,))
         self.add_child_context(sclp)
 
-    def cylinder(self, r, d, h, center=False):
-        nr = None
+    def cylinder(self, r, r1, r2, d, d1, d2, h, center=False):
+        nr1 = None
+        nr2 = None
         nh = None
         if (not is_var_set(d)) and is_var_set(r):
-            nr = r
+            nr1 = r
+            nr2 = r
         elif is_var_set(d) and (not is_var_set(r)):
-            nr = d/2.0
+            nr1 = d/2.0
+            nr2 = d/2.0
         elif is_var_set(d) and is_var_set(r):
-            nr = d/2.0
-        elif (not is_var_set(d)) and (not is_var_set(r)):
-            nr = 0.5
+            nr1 = d/2.0
+            nr2 = d/2.0
+        elif (not is_var_set(d)) and (not is_var_set(r)) and (is_var_set(r1) and is_var_set(r2)):
+            nr1 = r1
+            nr2 = r2
+        elif (not is_var_set(d)) and (not is_var_set(r)) and (is_var_set(d1) and is_var_set(d2)):
+            nr1 = d1/2.0
+            nr2 = d2/2.0
+        else:
+            nr1 = 0.5
+            nr2 = 0.5
 
         nh = 1.0
         if is_var_set(h):
             nh = h
 
         ax = gp_Ax2(gp_Pnt(0,0,0), gp_Dir(0,0,1))
-        s = BRepPrimAPI_MakeCylinder(ax, nr, nh).Shape()
+        s = None
+        if nr1==nr2:
+            s = BRepPrimAPI_MakeCylinder(ax, nr1, nh).Shape()
+        else:
+            s = BRepPrimAPI_MakeCone(ax, nr1, nr2, nh).Shape()
         scls = SCLShape(s)
         if (center):
             debug("center cylinder")

@@ -107,6 +107,10 @@ cube_module_definition = {'type': 'stat_module_definition', 'id': 'cube', 'line'
 cylinder_module_definition = {'type': 'stat_module_definition', 'id': 'cylinder', 'line': 0, 'args': [
     {'type': 'expr_assign', 'id': 'r', 'val': {'type': 'expr_number', 'line': 0, 'val': Noval}},
     {'type': 'expr_assign', 'id': 'd', 'val': {'type': 'expr_number', 'line': 0, 'val': Noval}},
+    {'type': 'expr_assign', 'id': 'r1', 'val': {'type': 'expr_number', 'line': 0, 'val': Noval}},
+    {'type': 'expr_assign', 'id': 'd1', 'val': {'type': 'expr_number', 'line': 0, 'val': Noval}},
+    {'type': 'expr_assign', 'id': 'r2', 'val': {'type': 'expr_number', 'line': 0, 'val': Noval}},
+    {'type': 'expr_assign', 'id': 'd2', 'val': {'type': 'expr_number', 'line': 0, 'val': Noval}},
     {'type': 'expr_assign', 'id': 'h', 'val': {'type': 'expr_number', 'line': 0, 'val': 1.0}},
     {'type': 'expr_assign', 'id': 'center', 'line': 0, 'val': {'type': 'expr_bool', 'line': 0, 'val': False}}
 ]}
@@ -811,23 +815,35 @@ class SCL:
                     self.push_stack()
                     self.parse_kwargs(s['id'], s['line'], cylinder_module_definition['args'], s['args'])
                     top = self.stack[-1]
-                    r = 0.5
-                    d = 1.0
-                    h = 1.0
+                    r = Noval
+                    d = Noval
+                    h = Noval
+                    r1 = Noval
+                    r2 = Noval
+                    d1 = Noval
+                    d2 = Noval
                     center = False
                     if (top.has_variable('center', s['line'])):
                         center = self.find_variable_value('center', s['line'])
                     if (top.has_variable('r', s['line'])):
                         r = self.find_variable_value('r', s['line'])
+                    if (top.has_variable('r1', s['line'])):
+                        r1 = self.find_variable_value('r1', s['line'])
+                    if (top.has_variable('r2', s['line'])):
+                        r2 = self.find_variable_value('r2', s['line'])
                     if (top.has_variable('d', s['line'])):
                         d = self.find_variable_value('d', s['line'])
+                    if (top.has_variable('d1', s['line'])):
+                        d1 = self.find_variable_value('d1', s['line'])
+                    if (top.has_variable('d2', s['line'])):
+                        d2 = self.find_variable_value('d2', s['line'])
                     if (top.has_variable('h', s['line'])):
                         h = self.find_variable_value('h', s['line'])
 
                     debug("args: %s"%(s['args'],))
                     debug("Call builtin cylinder(r=%s, d=%s, h=%s, center=%s) line: %i"%(str(r), str(d), str(h), str(center), s['line']))
                     if not debug_parser:
-                        self.active_context.cylinder(r, d, h, center)
+                        self.active_context.cylinder(r, r1, r2, d, d1, d2, h, center)
                     else:
                         pass
                     self.pop_stack()
