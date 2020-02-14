@@ -578,7 +578,7 @@ class SCL:
                         # with extrude(l):
                         self.push_context(SCLExtrude, get_inc_name("linear_extrude"))
                         self.parse_block(s['block'])
-                        self.context.linear_extrude(l)
+                        self.active_context.linear_extrude(l)
                         self.pop_context()
                     debug("Leave linear extrude")
                     self.pop_stack()
@@ -774,7 +774,7 @@ class SCL:
                             e[i] = e_[i]
                     debug("Call builtin line(%s->%s)"%(st, e))
                     if not debug_parser:
-                        self.context.line(V3(st[0],st[1],st[2]), V3(e[0],e[1],e[2]))
+                        self.active_context.line(V3(st[0],st[1],st[2]), V3(e[0],e[1],e[2]))
                     else:
                         pass
                     self.pop_stack()
@@ -788,7 +788,7 @@ class SCL:
 
                     debug("Call builtin fillet(%f)"%(r,))
                     if not debug_parser:
-                        self.context.fillet(r)
+                        self.active_context.fillet(r)
                     else:
                         pass
                     self.pop_stack()
@@ -948,6 +948,7 @@ class SCL:
                     self.pop_stack()
         elif t=='use':
             path = unstringify(s['path'])
+            filename, ext = os.path.splitext(path)
             base_paths = [os.getcwd(), os.path.dirname(os.path.abspath(self.path))]
             paths = [os.path.join(bp, path) for bp in base_paths]
             file_found = False
@@ -955,6 +956,13 @@ class SCL:
                 if os.path.isfile(p):
                     debug("Using path %s"%(p,))
                     parser = None
+                    if ext == '.sck':
+                        self.push_context(SCLProfile2, get_inc_name("profile2"))
+                    elif (ext == '.scp') or (ext == '.scad'):
+                        self.push_context(SCLPart3, get_inc_name("part"))
+                    else:
+                        critical("%s:%i Unknown file type %s"%(self.path, s['line'], path,))
+                        
                     try:
                         parser = ScadLikeParser(data=None, path=p, debug=self.debug)
                         ep.push_event(ee.parse_file, p)
@@ -965,6 +973,7 @@ class SCL:
                     debug(json.dumps(parser.data, indent=2))
                     for s in parser.data:
                         self.parse_statement(s, use=True)
+                    self.pop_context()
                     file_found = True
                     break
             if (not file_found):

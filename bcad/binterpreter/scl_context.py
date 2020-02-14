@@ -42,6 +42,8 @@ names = {
     "profile2": 0,
     "step": 0,
     "stl": 0,
+    "part": 0,
+    "extrusion": 0,
     "unknown": 0,
 }
 
@@ -513,24 +515,39 @@ class SCLProfile2(SCLContext):
         if (w != None):
             Singleton.sd.display.DisplayShape(w, writer)
 
-        if (writer == None):
-            Singleton.sd.display.FitAll()
-            Singleton.sd.start_display()
-
 class SCLExtrude(SCLContext):
     def __init__(self, parent):
         super().__init__(parent)
-        self.body = None
+        self.shape = None
 
     def linear_extrude(self, height=1.0):
-        f = self.child.get_face()
-        prism_vec = gp_Vec(0, 0, height)
-        self.body = BRepPrimAPI_MakePrism(f.Face(), prism_vec)
+        faces = []
+        for c in self.children:
+            debug("Adding face")
+            f = c.get_face()
+            faces.append(f)
+
+        self.children = []
+
+        for f in faces:
+            prism_vec = gp_Vec(0, 0, height)
+            shape = BRepPrimAPI_MakePrism(f.Face(), prism_vec).Shape()
+            scls = SCLShape(shape)
+            sclp = SCLPart3(self)
+            sclp.set_shape(scls)
+            name = get_inc_name("extrusion")
+            sclp.set_name(name)
+            debug("Creating extrusion %s"%(name,))
+            self.add_child_context(sclp)
 
     def display(self, writer=None):
         debug("Display SCLExtrude")
-        if (writer == None):
-            Singleton.sd.display.DisplayShape(self.body.Shape())
+        debug("Children: %s"%(repr(self.children),))
+        for c in self.children:
+            c.display(writer)
+
+        if self.shape != None:
+            self.shape.display(writer)
 
 class SCLUnion(SCLPart3):
     def __init__(self, parent):
