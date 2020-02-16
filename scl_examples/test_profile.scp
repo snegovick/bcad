@@ -1,0 +1,9 @@
+use <v20x.sck>;
+
+module v20x() {
+  profile() { 
+    v20x_sketch();
+  }
+}
+
+v20x();

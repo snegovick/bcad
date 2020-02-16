@@ -34,6 +34,7 @@ names = {
     "translate": 0,
     "color": 0,
     "cube": 0,
+    "polygon": 0,
     "cylinder": 0,
     "linear_extrude": 0,
     "union": 0,
@@ -189,6 +190,15 @@ class V3:
     def z(self):
         return self.v[2]
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            if (self.x() == other.x()) and (self.y() == other.y()) and (self.z() == other.z()):
+                return True
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __repr__(self):
         return "<V3 (%f,%f,%f)>"%(self.v[0], self.v[1], self.v[2])
 
@@ -271,6 +281,7 @@ class SCLPart3(SCLContext):
     def __init__(self, parent):
         super().__init__(parent)
         self.shape = None
+        self.profile = None
     
     def set_shape(self, shape):
         self.shape = shape
@@ -348,6 +359,26 @@ class SCLPart3(SCLContext):
         sclp.set_name(name)
         debug("Creating cube %s"%(name,))
         self.add_child_context(sclp)
+
+    def polygon(self, points, paths):
+        p = SCLProfile2(self)
+        self.add_child_context(p)
+        p.set_name(get_inc_name("polygon"))
+        for e, pth in enumerate(paths):
+            start = int(paths[e-1])
+            end = int(paths[e])
+            ps = points[start]
+            pe = points[end]
+            v2s = V3(ps[0], ps[1], 0)
+            v2e = V3(pe[0], pe[1], 0)
+            p.line(v2s, v2e)
+        self.profile = p
+
+    def get_face(self):
+        if (self.profile != None):
+            return self.profile.get_face()
+        warning("Part contains no profile")
+        return None
 
     def cylinder(self, r, r1, r2, d, d1, d2, h, center=False):
         nr1 = None

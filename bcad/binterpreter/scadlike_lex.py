@@ -20,8 +20,6 @@ reserved = {
     'square': 'SQUARE',
     'text': 'TEXT',
     'polygon': 'POLYGON',
-    'paths': 'PATHS',
-    'points': 'POINTS',
     'undef': 'UNDEF',
     'polyhedron': 'POLYHEDRON',
     'triangles': 'TRIANGLES',

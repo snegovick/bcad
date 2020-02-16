@@ -154,9 +154,9 @@ class ScadLikeParser(ScadLikeLex):
                                 | CYLINDER parameters
                                 | IMPORT_STEP parameters
                                 | IMPORT_STL parameters
+                                | POLYGON parameters
         '''
         p[0] = {'type': 'stat_call_builtin_modules', 'id': p[1], 'args': p[2], 'line': p.lineno(1)}
-
 
     def p_expression_call(self, p):
         "expression : call"

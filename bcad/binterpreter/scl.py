@@ -53,6 +53,10 @@ rotate_module_definition = {'type': 'stat_module_definition', 'id': 'rotate', 'l
         {'type': 'expr_number', 'val': 0.0, 'line': 0},
         {'type': 'expr_number', 'val': 0.0, 'line': 0}
     ]}}]}
+polygon_module_definition = {'type': 'stat_module_definition', 'id': 'polygon', 'line': 0, 'args': [
+    {'type': 'expr_assign', 'id': 'points', 'val': {'type': 'array_list', 'line': 0, 'val': []}},
+    {'type': 'expr_assign', 'id': 'paths', 'val': {'type': 'array_list', 'line': 0, 'val': []}},
+]}
 translate_module_definition = {'type': 'stat_module_definition', 'id': 'translate', 'line': 0, 'args': [
     {'type': 'expr_assign', 'id': 'v', 'val': {'type': 'array_list', 'line': 0, 'val': [
         {'type': 'expr_number', 'val': 0.0, 'line': 0},
@@ -231,7 +235,7 @@ class SCL:
             slp = ScadLikeParser(data=self.data, path=self.path, debug=self.debug)
             ep.push_event(ee.parse_file, self.path)
         except ParserError as pe:
-            warning("%s:%i Unknown expression: %s"%(self.path, pe.lineno, pe.message))
+            critical("%s:%i Unknown expression: %s"%(self.path, pe.lineno, pe.message))
             if (self.verbose>=4):
                 traceback.print_exc()
         else:
@@ -767,6 +771,24 @@ class SCL:
                     debug("Call builtin fillet(%f)"%(r,))
                     if not debug_parser:
                         self.active_context.fillet(r)
+                    else:
+                        pass
+                    self.pop_stack()
+                elif mid=='polygon':
+                    self.push_stack()
+                    self.parse_kwargs(s['id'], s['line'], polygon_module_definition['args'], s['args'])
+                    top = self.stack[-1]
+                    points = Noval
+                    paths = Noval
+                    if (top.has_variable('points', s['line'])):
+                        points = self.find_variable_value('points', s['line'])
+                    if (top.has_variable('paths', s['line'])):
+                        paths = self.find_variable_value('paths', s['line'])
+                    debug("Call builtin polygon(%s, %s) line: %i"%(str(points), str(paths), s['line']))
+                    if not debug_parser:
+                        self.push_context(SCLPart3, get_inc_name("part"))
+                        self.active_context.polygon(points, paths)
+                        self.pop_context()
                     else:
                         pass
                     self.pop_stack()
