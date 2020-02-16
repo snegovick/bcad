@@ -133,39 +133,32 @@ class SCLFrame:
         self.modules = {}
 
     def get_variable_value(self, varname, line):
-        #print('SCLFrame:%i:Get variable %s value'%(line, varname))
         if varname in self.variables:
             return self.variables[varname]
         raise UnknownVariableError(varname, line)
 
     def has_variable(self, varname, line):
-        #print('SCLFrame:%i:Check variable %s existance'%(line, varname))
         if varname in self.variables:
             return True
         return False
 
     def set_variable(self, varname, value, line):
-        #print('SCLFrame:%i:Setting variable %s: %s'%(line, varname, value))
         self.variables[varname] = value
 
     def get_function(self, fname, line):
-        #print('SCLFrame:%i:Get function %s'%(line, fname))
         if fname in self.functions:
             return self.functions[fname]
         raise UnknownFunctionError(fname, line)
 
     def has_function(self, fname, line):
-        #print('SCLFrame:%i:Check function %s existance'%(line, fname))
         if fname in self.functions:
             return True
         return False
 
     def set_function(self, fname, value, line):
-        #print('SCLFrame:%i:Setting function %s'%(line, fname))
         self.functions[fname] = value
 
     def get_module(self, mname, line):
-        #print('SCLFrame:%i:Get module %s'%(line, mname))
         if mname in self.modules:
             return self.modules[mname]
         raise UnknownModuleError(mname, line)
@@ -278,12 +271,6 @@ class SCL:
     def set_variable(self, varname, value, line):
         debug('SCL:%i:Setting variable %s: %s'%(line, varname, value))
         top = self.stack[-1]
-#        for f in reversed(self.stack):
-#            if (f.has_variable(varname, line)):
-#                f.set_variable(varname, value, line)
-#                return
-#        top = self.stack[-1]
-#        print('Variable is not allocated, allocate on top frame')
         top.set_variable(varname, value, line)
 
     def find_function(self, fname, line):
@@ -431,7 +418,6 @@ class SCL:
                 pdiff = diff
                 
             debug("arr: %s"%(str(arr),))
-            #arr = [v for v in np.arange(start, end, step)]
             return arr
         elif e['type']=='expr_call':
             self.push_stack()
@@ -454,7 +440,6 @@ class SCL:
                 ret = rv
                 debug_expr("Call builtin reverse(%s)->(%s)"%(str(v),str(ret)))
             elif e['id'] == 'concat':
-                #self.parse_kwargs(e['id'], e['line'], concat_function_definition['args'], e['args'])
                 top = self.stack[-1]
                 ov = []
                 for i, a in enumerate(s['args']):
@@ -554,9 +539,6 @@ class SCL:
         t = s['type']
         debug("%i:%s"%(s['line'],s['type']))
         if t=='stat_assign':
-            # if use:
-            #     debug("Skip assignment because \"use\" is set")
-            # else:
             self.parse_expr(s['val'])
         elif t=='stat_builtin':
             if use:
@@ -574,8 +556,6 @@ class SCL:
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
-                        # todo: rewrite
-                        # with extrude(l):
                         self.push_context(SCLExtrude, get_inc_name("linear_extrude"))
                         self.parse_block(s['block'])
                         self.active_context.linear_extrude(l)
@@ -597,7 +577,6 @@ class SCL:
                     self.pop_stack()
                 elif s['id'] == 'union':
                     self.push_stack()
-                    #self.parse_kwargs(s['id'], s['line'], union_module_definition['args'], s['args'])
                     top = self.stack[-1]
 
                     debug("Call union()")
@@ -719,7 +698,6 @@ class SCL:
                         self.parse_block(s['block'])
                     else:
                         debug("Call builtin mirror(%f, %f, %f)"%(v[0],v[1], v[2]))
-                        # todo: rewrite
                         self.parse_block(s['block'])
                         self.active_context.mirror(v[0], v[1], v[2])
                     debug("Leave mirror")
@@ -1005,7 +983,6 @@ class SCL:
             raise UnhandledCaseError('unknown statement \"%s\"'%(t,))
                 
 if __name__=="__main__":
-    print("enter the main")
     import sys
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', help='file to read', required=True, type=str)
