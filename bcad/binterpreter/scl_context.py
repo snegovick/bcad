@@ -32,6 +32,7 @@ import math
 
 names = {
     "translate": 0,
+    "rotate": 0,
     "color": 0,
     "cube": 0,
     "polygon": 0,
@@ -364,6 +365,8 @@ class SCLPart3(SCLContext):
         p = SCLProfile2(self)
         self.add_child_context(p)
         p.set_name(get_inc_name("polygon"))
+        if paths == []:
+            paths = [i for i in range(len(points))]
         for e, pth in enumerate(paths):
             start = int(paths[e-1])
             end = int(paths[e])
@@ -550,6 +553,10 @@ class SCLExtrude(SCLContext):
     def __init__(self, parent):
         super().__init__(parent)
         self.shape = None
+
+    def apply_trsf(self, trsf):
+        if self.shape != None:
+            self.shape.transform(trsf)
 
     def linear_extrude(self, height=1.0):
         faces = []

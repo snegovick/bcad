@@ -227,7 +227,7 @@ class ScadLikeParser(ScadLikeLex):
     def p_array_right_range(self, p):
         '''array_right : OSQUARE expression COLON expression ESQUARE
                        | OSQUARE expression COLON expression COLON expression ESQUARE'''
-        if (len(p) == 5):
+        if (len(p) == 6):
             p[0] = {'type':'array_range', 'val': {'start': p[2], 'end': p[4]}, 'line': p.lineno(0)}
         else:
             p[0] = {'type':'array_range', 'val': {'start': p[2], 'end': p[6], 'step': p[4]}, 'line': p.lineno(0)}

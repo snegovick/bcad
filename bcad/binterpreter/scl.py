@@ -21,7 +21,7 @@ import logging
 from bcad.binterpreter.events import EVEnum, EventProcessor, ee, ep
 from bcad.binterpreter.singleton import Singleton
 from bcad.binterpreter.scl_writer import SCLSTLWriter, SCLSTEPWriter, SCLDXFWriter
-from bcad.binterpreter.scl_util import Noval, unstringify
+from bcad.binterpreter.scl_util import Noval, unstringify, sign
 from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLDifference, SCLProjection, SCLPart3, get_inc_name
 
 debug_parser=False
@@ -416,7 +416,7 @@ class SCL:
             while (True):
                 v+=step
                 diff = v-end
-                if (diff/abs(diff)!=pdiff/abs(pdiff)):
+                if (diff!=0) and (sign(diff)!=sign(pdiff)):
                     break
                 arr.append(v)
                 pdiff = diff
@@ -550,19 +550,21 @@ class SCL:
             else:
                 if s['id'] == 'linear_extrude':
                     self.push_stack()
-                    self.parse_kwargs(s['id'], s['line'], linear_extrude_module_definition['args'], s['args'])
-                    l = 1
-                    top = self.stack[-1]
-                    if (top.has_variable('height', s['line'])):
-                        l = self.find_variable_value('height', s['line'])
-
-                    debug("Call builtin extrude(%f)"%(l,))
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
                         self.push_context(SCLExtrude, get_inc_name("linear_extrude"))
                         self.parse_block(s['block'])
+                        self.push_stack()
+                        self.parse_kwargs(s['id'], s['line'], linear_extrude_module_definition['args'], s['args'])
+                        l = 1
+                        top = self.stack[-1]
+                        if (top.has_variable('height', s['line'])):
+                            l = self.find_variable_value('height', s['line'])
+                            
+                        debug("Call builtin extrude(%f)"%(l,))
                         self.active_context.linear_extrude(l)
+                        self.pop_stack()
                         self.pop_context()
                     debug("Leave linear extrude")
                     self.pop_stack()
