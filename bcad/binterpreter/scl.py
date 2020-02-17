@@ -409,17 +409,20 @@ class SCL:
                 step = self.parse_expr(e['val']['step'])
             start = self.parse_expr(e['val']['start'])
             end = self.parse_expr(e['val']['end'])
-            v = start
-            arr = [v]
-            diff = v-end
-            pdiff = diff
-            while (True):
-                v+=step
+            if end>=start:
+                v = start
+                arr = [v]
                 diff = v-end
-                if (diff!=0) and (sign(diff)!=sign(pdiff)):
-                    break
-                arr.append(v)
                 pdiff = diff
+                while (True):
+                    v+=step
+                    diff = v-end
+                    if (diff!=0) and (sign(diff)!=sign(pdiff)):
+                        break
+                    arr.append(v)
+                    pdiff = diff
+            else:
+                arr = []
                 
             debug("arr: %s"%(str(arr),))
             return arr
