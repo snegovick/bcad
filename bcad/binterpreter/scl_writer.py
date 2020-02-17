@@ -13,6 +13,9 @@ from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
 from OCC.Core.BRep import BRep_Tool, BRep_Tool_Curve
 from OCC.Core.Geom import Geom_Curve, Geom_Line, Geom_BSplineCurve
 from OCC.Core.GeomAbs import GeomAbs_Line, GeomAbs_Circle, GeomAbs_Ellipse, GeomAbs_Hyperbola, GeomAbs_Parabola, GeomAbs_BezierCurve, GeomAbs_BSplineCurve, GeomAbs_OffsetCurve, GeomAbs_OtherCurve
+from OCC.Core.STEPControl import STEPControl_Writer, STEPControl_AsIs
+from OCC.Core.Interface import Interface_Static_SetCVal
+from OCC.Core.IFSelect import IFSelect_RetDone
 
 from logging import debug, info, warning, error, critical
 import logging
@@ -50,7 +53,7 @@ class SCLSTEPWriter:
         Interface_Static_SetCVal("write.step.schema", "AP203")
 
     def Write(self, path):
-        status = step_writer.Write(path)
+        status = self.writer.Write(path)
         if status != IFSelect_RetDone:
             raise AssertionError("Write failed")
 

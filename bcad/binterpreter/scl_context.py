@@ -11,7 +11,6 @@ from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse, BRepAlgoAPI_Cut
 from OCC.Core.TopoDS import topods, TopoDS_Compound, TopoDS_Solid
 from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK, Quantity_NOC_MATRAGRAY, Quantity_NOC_YELLOW, Quantity_NOC_PERU
 from OCC.Core.Aspect import Aspect_Grid
-from OCC.Core.STEPControl import STEPControl_AsIs
 #from OCC.Display.SimpleGui import init_display
 from OCC.Display.OCCViewer import rgb_color
 from OCC.Extend.TopologyUtils import TopologyExplorer

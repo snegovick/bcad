@@ -10,10 +10,6 @@ import math
 import argparse
 import traceback
 
-from OCC.Core.STEPControl import STEPControl_Writer
-from OCC.Core.Interface import Interface_Static_SetCVal
-from OCC.Core.IFSelect import IFSelect_RetDone
-
 from logging import debug, info, warning, error, critical
 import logging
 
