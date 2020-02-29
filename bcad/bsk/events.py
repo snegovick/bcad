@@ -10,13 +10,13 @@ import imp
 import os
 
 from logging import debug, info, warning, error, critical
-from bsuite.bsk.util import dbgfname
+from bcad.bsk.util import dbgfname
 
-from bsuite.bsk.singleton import Singleton
-from bsuite.bsk.state import State
-from bsuite.bsk.project import project
-from bsuite.bsk.elements import EMode, ELine
-from bsuite.bsk.calc_utils import sign
+from bcad.bsk.singleton import Singleton
+from bcad.bsk.state import State
+from bcad.bsk.project import project
+from bcad.bsk.elements import EMode, ELine
+from bcad.bsk.calc_utils import sign
 
 def screen_to_pointer(x, y):
     offset = Singleton.state.get_offset()

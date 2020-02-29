@@ -6,8 +6,8 @@ from gi.repository import Gtk, Gdk
 from gi.repository import Pango
 from gi.repository import PangoCairo
 
-from bsuite.bsk.singleton import Singleton
-from bsuite.bsk.events import ep, ee
+from bcad.bsk.singleton import Singleton
+from bcad.bsk.events import ep, ee
 
 from logging import debug, info, warning, error, critical
 #try:

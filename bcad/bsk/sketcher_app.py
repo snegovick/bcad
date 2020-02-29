@@ -10,12 +10,12 @@ from gi.repository import GObject as gobject
 from logging import debug, info, warning, error, critical
 import logging
 
-from bsuite.bsk.events import EVEnum, EventProcessor, ee, ep
-from bsuite.bsk.cairo_screen import CairoScreen
-from bsuite.bsk.singleton import Singleton
-from bsuite.bsk.project import project
-from bsuite.bsk.util import dbgfname
-from bsuite.bsk import util
+from bcad.bsk.events import EVEnum, EventProcessor, ee, ep
+from bcad.bsk.cairo_screen import CairoScreen
+from bcad.bsk.singleton import Singleton
+from bcad.bsk.project import project
+from bcad.bsk.util import dbgfname
+from bcad.bsk import util
 
 class Handler:
     def onDestroy(self, *args):

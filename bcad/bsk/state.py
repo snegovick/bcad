@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-from bsuite.bsk.singleton import Singleton
-from bsuite.bsk.settings import Settings
+from bcad.bsk.singleton import Singleton
+from bcad.bsk.settings import Settings
 
 from logging import debug, info, warning, error, critical
 

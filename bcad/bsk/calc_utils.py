@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import math
 from logging import debug, info, warning, error, critical
-from bsuite.bsk.util import dbgfname
+from bcad.bsk.util import dbgfname
 
 def inch_to_mm(i):
     return i*25.4
