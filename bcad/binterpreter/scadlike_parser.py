@@ -196,6 +196,7 @@ class ScadLikeParser(ScadLikeLex):
                            | MIRROR parameters action_child_block
                            | ROTATE parameters action_child_block
                            | UNION parameters action_child_block
+                           | INTERSECTION parameters action_child_block
                            | DIFFERENCE parameters action_child_block
                            | TRANSLATE parameters action_child_block
                            | PROJECTION parameters action_child_block

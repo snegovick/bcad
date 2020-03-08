@@ -1,0 +1,4 @@
+intersection() {
+  cube([10,10,10]);
+  rotate([45,45,45]) cube([10,10,10]);
+}

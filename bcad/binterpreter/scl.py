@@ -18,7 +18,7 @@ from bcad.binterpreter.events import EVEnum, EventProcessor, ee, ep
 from bcad.binterpreter.singleton import Singleton
 from bcad.binterpreter.scl_writer import SCLSTLWriter, SCLSTEPWriter, SCLDXFWriter
 from bcad.binterpreter.scl_util import Noval, unstringify, sign
-from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLDifference, SCLProjection, SCLPart3, get_inc_name
+from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLIntersection, SCLDifference, SCLProjection, SCLPart3, get_inc_name
 
 debug_parser=False
 debug_expr_en = False
@@ -66,8 +66,9 @@ color_module_definition = {'type': 'stat_module_definition', 'id': 'color', 'lin
         {'type': 'expr_number', 'val': 0.0, 'line': 0}
     ]}}]}
 profile_module_definition = {'type': 'stat_module_definition', 'id': 'profile', 'line': 0, 'args': []}
-linear_extrude_module_definition = {'type': 'stat_module_definition', 'id': 'linear_extrude', 'line': 0, 'args': [{'type': 'expr_assign', 'id': 'l', 'val': {'type': 'expr_number', 'val': 1.0, 'line': 0}, 'line': 0}]}
+linear_extrude_module_definition = {'type': 'stat_module_definition', 'id': 'linear_extrude', 'line': 0, 'args': [{'type': 'expr_assign', 'id': 'height', 'val': {'type': 'expr_number', 'val': 1.0, 'line': 0}, 'line': 0}]}
 union_module_definition = {'type': 'stat_module_definition', 'id': 'union', 'line': 0, 'args': []}
+intersection_module_definition = {'type': 'stat_module_definition', 'id': 'intersection', 'line': 0, 'args': []}
 difference_module_definition = {'type': 'stat_module_definition', 'id': 'difference', 'line': 0, 'args': []}
 mirror_module_definition = {'type': 'stat_module_definition', 'id': 'mirror', 'line': 0, 'args': [
     {'type': 'expr_assign', 'id': 'v', 'val': {'type': 'array_list', 'line': 0, 'val': [
@@ -593,6 +594,20 @@ class SCL:
                         self.active_context.union()
                         self.pop_context()
                     debug("Leave union")
+                    self.pop_stack()
+                elif s['id'] == 'intersection':
+                    self.push_stack()
+                    top = self.stack[-1]
+
+                    debug("Call intersection()")
+                    if debug_parser:
+                        self.parse_block(s['block'])
+                    else:
+                        self.push_context(SCLIntersection, get_inc_name("intersection"))
+                        self.parse_block(s['block'])
+                        self.active_context.intersection()
+                        self.pop_context()
+                    debug("Leave intersection")
                     self.pop_stack()
                 elif s['id'] == 'difference':
                     self.push_stack()

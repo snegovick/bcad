@@ -7,7 +7,7 @@ from OCC.Core.gp import gp_Ax1, gp_Ax2, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec, gp_Pln,
 from OCC.Core.ChFi2d import ChFi2d_AnaFilletAlgo
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_Transform, BRepBuilderAPI_MakeFace
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakePrism, BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeCone, BRepPrimAPI_MakeBox
-from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse, BRepAlgoAPI_Cut
+from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse, BRepAlgoAPI_Cut, BRepAlgoAPI_Common
 from OCC.Core.TopoDS import topods, TopoDS_Compound, TopoDS_Solid
 from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK, Quantity_NOC_MATRAGRAY, Quantity_NOC_YELLOW, Quantity_NOC_PERU
 from OCC.Core.Aspect import Aspect_Grid
@@ -38,6 +38,7 @@ names = {
     "cylinder": 0,
     "linear_extrude": 0,
     "union": 0,
+    "intersection": 0,
     "difference": 0,
     "projection": 0,
     "profile2": 0,
@@ -607,6 +608,30 @@ class SCLUnion(SCLPart3):
 
     def display(self, writer=None):
         debug("Display SCLUnion")
+        if self.shape != None:
+            self.shape.display(writer)
+
+class SCLIntersection(SCLPart3):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def intersection(self):
+        children = self.get_children()
+        shapes = []
+        debug("children: %s"%(children,))
+        for c in children:
+            if c.shape != None:
+                shapes.append(c.shape)
+        u = None
+        if len(shapes)>0:
+            u = shapes[0].get_shape()
+            for s in shapes[1:]:
+                u = BRepAlgoAPI_Common(u, s.get_shape()).Shape()
+        self.shape = SCLShape(u)
+        self.children = []
+
+    def display(self, writer=None):
+        debug("Display SCLIntersection")
         if self.shape != None:
             self.shape.display(writer)
 
