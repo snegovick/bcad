@@ -360,6 +360,8 @@ class SCL:
                 return e1num*e2num
             elif op == '/':
                 return e1num/e2num
+            elif op == '%':
+                return e1num%e2num
             elif op == '==':
                 debug("Compare %s == %s -> %s"%((e1num), str(e2num), str(e1num==e2num)))
                 return e1num==e2num

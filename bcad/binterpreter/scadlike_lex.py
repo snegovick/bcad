@@ -68,6 +68,7 @@ class ScadLikeLex(object):
         'COLON',
         'QUESTION',
         'PLUS',
+        'MOD',
         'MINUS',
         'TIMES',
         'DIVIDE',
@@ -101,6 +102,7 @@ class ScadLikeLex(object):
     t_COLON          = r':'
     t_QUESTION       = r'\?'
     t_PLUS           = r'\+'
+    t_MOD            = r'%'
     t_MINUS          = r'-'
     t_TIMES          = r'\*'
     t_DIVIDE         = r'/'

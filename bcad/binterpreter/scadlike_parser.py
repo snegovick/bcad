@@ -14,7 +14,7 @@ class ScadLikeParser(ScadLikeLex):
     precedence = (
         ('nonassoc', 'LT', 'LE', 'GE', 'GT'),  # Nonassociative operators
         ('left', 'PLUS', 'MINUS'),
-        ('left', 'TIMES', 'DIVIDE'),
+        ('left', 'TIMES', 'DIVIDE', 'MOD'),
         ('right', 'UMINUS'),
     )
 
@@ -90,6 +90,7 @@ class ScadLikeParser(ScadLikeLex):
         """
         expression : expression PLUS expression
                    | expression MINUS expression
+                   | expression MOD expression
                    | expression TIMES expression
                    | expression DIVIDE expression
                    | expression ISEQUAL expression
