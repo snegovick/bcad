@@ -205,10 +205,15 @@ class SCL:
 
     def load_file(self):
         filename, ext = os.path.splitext(self.path)
+        run_parser = True
         if (ext == '.sck'):
             self.root = SCLProfile2(None)
-        if ((ext == '.scp') or (ext == '.scad')):
+        elif ((ext == '.scp') or (ext == '.scad')):
             self.root = SCLPart3(None)
+        elif ((ext == '.stp') or (ext == '.step')):
+            self.root = SCLPart3(None)
+            self.root.import_step(self.path)
+            run_parser = False
         else:
             warning("Unknown file type %s"%(ext,))
 
@@ -227,18 +232,19 @@ class SCL:
         self.context = self.root
         self.active_context = self.context
 
-        slp = None
-        try:
-            slp = ScadLikeParser(data=self.data, path=self.path, debug=self.debug)
-            ep.push_event(ee.parse_file, self.path)
-        except ParserError as pe:
-            critical("%s:%i Unknown expression: %s"%(self.path, pe.lineno, pe.message))
-            if (self.verbose>=4):
-                traceback.print_exc()
-        else:
-            debug(json.dumps(slp.data, indent=2))
-            for s in slp.data:
-                self.parse_statement(s)
+        if run_parser:
+            slp = None
+            try:
+                slp = ScadLikeParser(data=self.data, path=self.path, debug=self.debug)
+                ep.push_event(ee.parse_file, self.path)
+            except ParserError as pe:
+                critical("%s:%i Unknown expression: %s"%(self.path, pe.lineno, pe.message))
+                if (self.verbose>=4):
+                    traceback.print_exc()
+            else:
+                debug(json.dumps(slp.data, indent=2))
+                for s in slp.data:
+                    self.parse_statement(s)
 
         debug("Display context")
         self.context.display(writer)
