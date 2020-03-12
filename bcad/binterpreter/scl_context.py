@@ -653,6 +653,7 @@ class SCLDifference(SCLPart3):
             for s in shapes[1:]:
                 f = BRepAlgoAPI_Cut(f, s.get_shape()).Shape()
         self.shape = SCLShape(f)
+        self.shape.set_shape_color(shapes[0].get_shape_color())
         self.children = []
 
     def display(self, writer=None):

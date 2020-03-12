@@ -1,0 +1,5 @@
+color("yellow")
+difference() {
+  color("white") cube([10,10,10]);
+  color("black") cube([5,5,5]);
+}

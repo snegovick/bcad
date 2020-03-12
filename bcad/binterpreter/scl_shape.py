@@ -6,7 +6,7 @@ from OCC.Core.AIS import AIS_Shape
 from OCC.Core.Prs3d import Prs3d_LineAspect, Prs3d_Drawer
 
 from bcad.binterpreter.singleton import Singleton
-from bcad.binterpreter.scl_util import unstringify
+from bcad.binterpreter.scl_util import unstringify, Noval, is_var_set
 from bcad.binterpreter.colorname_map import colorname_map
 
 from logging import debug, info, warning, error, critical
@@ -15,7 +15,7 @@ class SCLShape(object):
     def __init__(self, shape):
         self.trsf = gp_Trsf()
         self.shape = shape
-        self.shape_color = Quantity_Color(Quantity_NOC_PERU)
+        self.shape_color = Noval
         self.style = "main"
         self.hidden = False
 
@@ -33,6 +33,11 @@ class SCLShape(object):
             debug("Set main_projection line style")
             self.style = "main_projection"
 
+    def set_shape_color(self, shape_color):
+        self.shape_color = shape_color
+
+    def get_shape_color(self):
+        return self.shape_color
 
     def color(self, color):
         debug("Trying to set color: %s"%(color,))
@@ -87,7 +92,10 @@ class SCLShape(object):
                     ais_context = Singleton.sd.display.GetContext()
                     ais_shp = AIS_Shape(self.shape)
                     ais_shp.SetWidth(2.0)
-                    ais_shp.SetColor(self.shape_color)
+                    if (is_var_set(self.shape_color)):
+                        ais_shp.SetColor(self.shape_color)
+                    else:
+                        ais_shp.SetColor(Quantity_Color(Quantity_NOC_PERU))
                     ais_context.Display(ais_shp, True)
                     
                     #Singleton.sd.display.DisplayColoredShape(self.shape, self.shape_color)
