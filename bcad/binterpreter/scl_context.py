@@ -21,7 +21,7 @@ from bcad.binterpreter.bgui import init_display
 from bcad.binterpreter.colorname_map import colorname_map
 from bcad.binterpreter.events import EVEnum, EventProcessor, ee, ep
 from bcad.binterpreter.singleton import Singleton
-from bcad.binterpreter.scl_shape import SCLShape
+from bcad.binterpreter.scl_shape import SCLShape, DISP_MODE_WIREFRAME
 from bcad.binterpreter.scl_util import Noval, is_var_set
 
 from logging import debug, info, warning, error, critical
@@ -65,11 +65,11 @@ class SCLDisplay:
         self.add_menu = None
         self.add_function_to_menu = None
         self.scl_init_display()
-    
+
     def mk_colored_line(self, start, direction, color, linestyle, width):
         line = Geom_Line(start, direction)
         ais_line = AIS_Line(line)
-        
+
         drawer = ais_line.Attributes()
         aspect = Prs3d_LineAspect(color, linestyle, width)
         drawer.SetLineAspect(aspect)
@@ -80,10 +80,10 @@ class SCLDisplay:
         center = gp_Pnt(0,0,0)
         zd = gp_Dir(0,0,10000)
         self.display.Context.Display(self.mk_colored_line(center, zd, rgb_color(0,0,1), 0, 1.0), False)
-        
+
         xd = gp_Dir(1,0,0)
         self.display.Context.Display(self.mk_colored_line(center, xd, rgb_color(1,0,0), 0, 1.0), False)
-        
+
         yd = gp_Dir(0,1,0)
         self.display.Context.Display(self.mk_colored_line(center, yd, rgb_color(0,1,0), 0, 1.0), False)
 
@@ -134,7 +134,7 @@ class SCLDisplay:
 
     def scl_init_display(self):
         self.display, self.start_display, self.add_menu, self.add_function_to_menu = init_display(size='fullscreen', periodic_callback=self.periodic, period=1)
-        
+
         self.add_menu('View')
         self.add_function_to_menu('View', self.top)
         self.add_function_to_menu('View', self.bottom)
@@ -146,23 +146,16 @@ class SCLDisplay:
         self.add_function_to_menu('View', self.perspective)
         self.add_function_to_menu('View', self.orthographic)
         self.add_function_to_menu('View', self.reset)
-        
-        
+
+
         p = gp_Pnt(0., 0., 0.)
         d = gp_Dir(0., 0., 1.)
         a = gp_Ax3(p, d)
-        
-        #display.GetViewer().SetPrivilegedPlane(a)
-        #display.GetViewer().SetRectangularGridValues(0, 0, 1, 1, 0)
-        #display.GetViewer().SetRectangularGridGraphicValues(100, 100, 0)
-        #display.GetViewer().Grid().SetColors(Quantity_Color(Quantity_NOC_BLACK), Quantity_Color(Quantity_NOC_BLACK))
-        
-        #display.GetViewer().ActivateGrid(0, 0)
+
         self.display.View.SetBgGradientColors(Quantity_Color(Quantity_NOC_ALICEBLUE), Quantity_Color(Quantity_NOC_ALICEBLUE), 2, True)
-        #display.display_graduated_trihedron()
-        
+
         self.axis()
-        
+
         self.display.Repaint()
 
 class V2:
@@ -263,6 +256,12 @@ class SCLContext(object):
         for c in self.children:
             c.propagate_color(color)
 
+    def propagate_display_mode(self, mode):
+        debug("Apply mode to %s: %s"%(self.name, type(self),))
+        self.apply_display_mode(mode)
+        for c in self.children:
+            c.propagate_display_mode(mode)
+
     def display(self, writer=None):
         debug("Display SCLContext")
         for c in self.children:
@@ -283,7 +282,7 @@ class SCLPart3(SCLContext):
         super().__init__(parent)
         self.shape = None
         self.profile = None
-    
+
     def set_shape(self, shape):
         self.shape = shape
 
@@ -294,6 +293,10 @@ class SCLPart3(SCLContext):
     def apply_trsf(self, trsf):
         if self.shape != None:
             self.shape.transform(trsf)
+
+    def apply_display_mode(self, mode):
+        if self.shape != None:
+            self.shape.display_mode = mode
 
     def rotate(self, x=0.0, y=0.0, z=0.0):
         trsf = gp_Trsf()
@@ -321,6 +324,11 @@ class SCLPart3(SCLContext):
         for c in self.children:
             c.propagate_trsf(trsf)
 
+    def display_wireframe(self):
+        self.display_mode = DISP_MODE_WIREFRAME
+        for c in self.children:
+            c.propagate_display_mode(self.display_mode)
+
     def translate(self, x=0.0, y=0.0, z=0.0):
         v = gp_Vec(x, y, z)
         a_trsf = gp_Trsf()
@@ -334,7 +342,7 @@ class SCLPart3(SCLContext):
             warning("Warning: no axis to mirror")
             return
         trsf = gp_Trsf()
-        
+
         d = gp_Dir(x, y, z)
         p = gp_Pnt(0,0,0)
         trsf.SetMirror(gp_Ax2(p, d))
@@ -347,7 +355,7 @@ class SCLPart3(SCLContext):
 
     def cube(self, xyz, center=False):
         cube_shape = BRepPrimAPI_MakeBox(xyz.x(), xyz.y(), xyz.z()).Shape()
-            
+
         scls = SCLShape(cube_shape)
         if (center):
             debug("center cube")
@@ -458,8 +466,13 @@ class SCLPart3(SCLContext):
 
     def display(self, writer=None):
         debug("Display SCLPart3")
+        #if self.display_mode == DISP_MODE_HLR:
+            #Singleton.sd.display.SetModeHLR()
+        #else:
+            #Singleton.sd.display.SetModeShaded()
         for c in self.children:
             c.display(writer)
+
         if self.shape != None:
             self.shape.display(writer)
 
@@ -509,7 +522,7 @@ class SCLProfile2(SCLContext):
             warning("Warning: no axis to mirror")
             return
         trsf = gp_Trsf()
-        
+
         d = gp_Dir(x, y, z)
         p = gp_Pnt()
         trsf.SetMirror(gp_Ax1(p, d))
@@ -746,7 +759,7 @@ class SCLProjection(SCLPart3):
                 sclp.set_shape(scls)
                 sclp.set_name(name+'isolinevcompound')
                 self.add_child_context(sclp)
-            if (hcompound != None):           
+            if (hcompound != None):
                 sclp = SCLPart3(self)
                 scls = SCLShape(hcompound)
                 scls.set_linestyle("hidden")

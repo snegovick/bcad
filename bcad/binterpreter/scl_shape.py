@@ -2,7 +2,7 @@ from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_ALICEBLUE, Quantity_N
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_Transform, BRepBuilderAPI_MakeFace
 from OCC.Core.gp import gp_Ax1, gp_Ax2, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec, gp_Pln, gp_Ax3
 from OCC.Display.OCCViewer import rgb_color
-from OCC.Core.AIS import AIS_Shape
+from OCC.Core.AIS import AIS_Shape, AIS_Shaded, AIS_TexturedShape, AIS_WireFrame
 from OCC.Core.Prs3d import Prs3d_LineAspect, Prs3d_Drawer
 
 from bcad.binterpreter.singleton import Singleton
@@ -11,11 +11,18 @@ from bcad.binterpreter.colorname_map import colorname_map
 
 from logging import debug, info, warning, error, critical
 
+DISP_MODE_NONE = 0
+DISP_MODE_SHADED = 1
+DISP_MODE_HLR = 2
+DISP_MODE_WIREFRAME = 3
+
+
 class SCLShape(object):
     def __init__(self, shape):
         self.trsf = gp_Trsf()
         self.shape = shape
         self.shape_color = Noval
+        self.display_mode = DISP_MODE_NONE
         self.style = "main"
         self.hidden = False
 
@@ -63,6 +70,7 @@ class SCLShape(object):
         self.shape = BRepBuilderAPI_Transform(self.shape, self.trsf, True).Shape()
 
     def display(self, writer=None):
+        debug("shape Display")
         if self.shape != None:
             if (writer != None):
                 writer.Transfer(self.shape)
@@ -71,7 +79,6 @@ class SCLShape(object):
                 ais_context = Singleton.sd.display.GetContext()                    
                 if (self.style == 'hidden'):
                     ais_shp = AIS_Shape(self.shape)
-
                     ais_shp.SetWidth(0.1)
                     ais_shp.SetTransparency(0.10)
                     ais_shp.SetColor(rgb_color(0,0,0))
@@ -92,12 +99,15 @@ class SCLShape(object):
                     ais_context = Singleton.sd.display.GetContext()
                     ais_shp = AIS_Shape(self.shape)
                     ais_shp.SetWidth(2.0)
+                    ais_shp.SetTypeOfHLR(2)
                     if (is_var_set(self.shape_color)):
                         ais_shp.SetColor(self.shape_color)
                     else:
                         ais_shp.SetColor(Quantity_Color(Quantity_NOC_PERU))
+                    if (self.display_mode == DISP_MODE_WIREFRAME):
+                        ais_context.SetDisplayMode(ais_shp, AIS_WireFrame, True)
+                    else:
+                        ais_context.SetDisplayMode(ais_shp, AIS_Shaded, True)
                     ais_context.Display(ais_shp, True)
-                    
-                    #Singleton.sd.display.DisplayColoredShape(self.shape, self.shape_color)
         else:
             warning("Empty shape")

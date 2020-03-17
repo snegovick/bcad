@@ -665,6 +665,20 @@ class SCL:
                     debug("Leave rotate [%s]"%(self.active_context.name))
                     self.pop_context()
                     self.pop_stack()
+
+                elif s['id']=='display_wireframe':
+                    debug("Display wireframe")
+                    self.push_stack()
+                    self.push_context(SCLPart3, get_inc_name("display_wireframe"))
+                    if debug_parser:
+                        self.parse_block(s['block'])
+                    else:
+                        self.parse_block(s['block'])
+                        debug("Call builtin display_wireframe()")
+                        self.active_context.display_wireframe()
+                    debug("Leave display_wireframe [%s]"%(self.active_context.name))
+                    self.pop_context()
+                    self.pop_stack()
                 elif s['id']=='translate':
                     debug("translate")
                     self.push_stack()

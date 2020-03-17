@@ -54,6 +54,7 @@ bsuite_reserved = {
     'fillet': 'FILLET',
     'import_step': 'IMPORT_STEP',
     'import_stl': 'IMPORT_STL',
+    'display_wireframe': 'DISPLAY_WIREFRAME',
 }
 
 reserved.update(bsuite_reserved)
