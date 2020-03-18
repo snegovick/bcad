@@ -35,6 +35,10 @@ class UnknownFunctionError(Exception):
     def __init__(self, fname, line):
         self.message = "Unknown function %s at line %i"%(fname, line)
 
+class UnknownModuleError(Exception):
+    def __init__(self, fname, line):
+        self.message = "Unknown module %s at line %i"%(fname, line)
+
 class UnhandledCaseError(Exception):
     def __init__(self, message):
         self.message = "Unhandled case encountered: %s"%(message)
