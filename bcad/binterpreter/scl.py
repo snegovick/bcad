@@ -414,7 +414,7 @@ class SCL:
                 step = self.parse_expr(e['val']['step'])
             start = self.parse_expr(e['val']['start'])
             end = self.parse_expr(e['val']['end'])
-            if end>=start:
+            if ((end>=start) and (step>0)) or ((end<=start) and (step<0)):
                 v = start
                 arr = [v]
                 diff = v-end
