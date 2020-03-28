@@ -28,6 +28,9 @@ from logging import debug, info, warning, error, critical
 
 import math
 
+class ContextError(Exception):
+    def __init__(self, preamble, fname, line):
+        self.message = "%s in %s at line %i"%(preamble, fname, line)
 
 names = {
     "translate": 0,
@@ -369,20 +372,25 @@ class SCLPart3(SCLContext):
         debug("Creating cube %s"%(name,))
         self.add_child_context(sclp)
 
-    def polygon(self, points, paths):
+    def polygon(self, points, paths, fname, line):
         p = SCLProfile2(self)
-        self.add_child_context(p)
-        p.set_name(get_inc_name("polygon"))
         if paths == []:
             paths = [i for i in range(len(points))]
         for e, pth in enumerate(paths):
             start = int(paths[e-1])
             end = int(paths[e])
+            if ((start>=len(points)) or (start<0)):
+                raise ContextError("Point #%i start index (%i) is out of range "%(e, start), fname, line)
+            if ((end>=len(points)) or (end<0)):
+                raise ContextError("Point #%i end index (%i) is out of range "%(e, end), fname, line)
+
             ps = points[start]
             pe = points[end]
             v2s = V3(ps[0], ps[1], 0)
             v2e = V3(pe[0], pe[1], 0)
             p.line(v2s, v2e)
+        self.add_child_context(p)
+        p.set_name(get_inc_name("polygon"))
         self.profile = p
 
     def get_face(self):
