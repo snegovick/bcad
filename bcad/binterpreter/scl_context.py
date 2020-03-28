@@ -32,6 +32,9 @@ class ContextError(Exception):
     def __init__(self, preamble, fname, line):
         self.message = "%s in %s at line %i"%(preamble, fname, line)
 
+    def __str__(self):
+        return self.message
+
 names = {
     "translate": 0,
     "rotate": 0,
@@ -380,12 +383,16 @@ class SCLPart3(SCLContext):
             start = int(paths[e-1])
             end = int(paths[e])
             if ((start>=len(points)) or (start<0)):
-                raise ContextError("Point #%i start index (%i) is out of range "%(e, start), fname, line)
+                raise ContextError("Point #%i start index (%i) is out of range"%(e, start), fname, line)
             if ((end>=len(points)) or (end<0)):
-                raise ContextError("Point #%i end index (%i) is out of range "%(e, end), fname, line)
+                raise ContextError("Point #%i end index (%i) is out of range"%(e, end), fname, line)
 
             ps = points[start]
             pe = points[end]
+            if (len(ps)<2):
+                raise ContextError("Element with index #%i is not a point: need at array of 2 elements, got %s"%(start, str(ps)), fname, line)
+            if (len(pe)<2):
+                raise ContextError("Element with index #%i is not a point: need at array of 2 elements, got %s"%(end, str(pe)), fname, line)
             v2s = V3(ps[0], ps[1], 0)
             v2e = V3(pe[0], pe[1], 0)
             p.line(v2s, v2e)

@@ -829,7 +829,10 @@ class SCL:
                     debug("Call builtin polygon(%s, %s) line: %i"%(str(points), str(paths), s['line']))
                     if not debug_parser:
                         self.push_context(SCLPart3, get_inc_name("part"))
-                        self.active_context.polygon(points, paths, s['id'], s['line'])
+                        try:
+                            self.active_context.polygon(points, paths, s['id'], s['line'])
+                        except BaseException as e:
+                            warning(str(e))
                         self.pop_context()
                     else:
                         pass
