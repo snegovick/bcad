@@ -48,16 +48,19 @@ class SCLShape(object):
 
     def color(self, color):
         debug("Trying to set color: %s"%(color,))
+        new_color = Noval
         if (type(color)==list):
             c = color[:]
             if (len(c)<4):
                 c.append(1.0)
-            self.shape_color = rgb_color(c[0], c[1], c[2])
+            new_color = rgb_color(c[0], c[1], c[2])
         else:
             if (unstringify(color) not in colorname_map):
                 warning("Unknown color: %s"%(color,))
             else:
-                self.shape_color = Quantity_Color(colorname_map[unstringify(color)])
+                new_color = Quantity_Color(colorname_map[unstringify(color)])
+        if not is_var_set(self.shape_color):
+            self.shape_color = new_color
 
     def get_shape(self):
         return self.shape
