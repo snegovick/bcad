@@ -11,6 +11,7 @@ from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse, BRepAlgoAPI_Cut, BRepAlgoAPI_
 from OCC.Core.TopoDS import topods, TopoDS_Compound, TopoDS_Solid
 from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK, Quantity_NOC_MATRAGRAY, Quantity_NOC_YELLOW, Quantity_NOC_PERU
 from OCC.Core.Aspect import Aspect_Grid
+from OCC.Core.V3d import V3d_XposYnegZpos, V3d_XposYposZpos, V3d_XnegYposZpos, V3d_XnegYnegZpos, V3d_XposYposZneg, V3d_XnegYposZneg, V3d_XposYnegZneg, V3d_XnegYnegZneg
 #from OCC.Display.SimpleGui import init_display
 from OCC.Display.OCCViewer import rgb_color
 from OCC.Extend.TopologyUtils import TopologyExplorer
@@ -103,30 +104,82 @@ class SCLDisplay:
 
     def top(self, event=None):
         self.display.View_Top()
-        self.display.FitAll()
+        self.display.Context.UpdateCurrentViewer()
 
     def bottom(self, event=None):
         self.display.View_Bottom()
-        self.display.FitAll()
+        self.display.Context.UpdateCurrentViewer()
 
     def left(self, event=None):
         self.display.View_Left()
-        self.display.FitAll()
+        self.display.Context.UpdateCurrentViewer()
 
     def right(self, event=None):
         self.display.View_Right()
-        self.display.FitAll()
+        self.display.Context.UpdateCurrentViewer()
 
     def front(self, event=None):
         self.display.View_Front()
-        self.display.FitAll()
+        self.display.Context.UpdateCurrentViewer()
 
     def rear(self, event=None):
         self.display.View_Rear()
+        self.display.Context.UpdateCurrentViewer()
+
+    def rxp(self, event=None):
+        self.display.View.Rotate(math.radians(15),0,0, True)
+        self.display.Context.UpdateCurrentViewer()
+
+    def rxn(self, event=None):
+        self.display.View.Rotate(math.radians(-15),0,0, True)
+        self.display.Context.UpdateCurrentViewer()
+
+    def ryp(self, event=None):
+        self.display.View.Rotate(0,math.radians(15),0, True)
+        self.display.Context.UpdateCurrentViewer()
+
+    def ryn(self, event=None):
+        self.display.View.Rotate(0,math.radians(-15),0, True)
+        self.display.Context.UpdateCurrentViewer()
+
+    def rzp(self, event=None):
+        self.display.View.Rotate(0,0,math.radians(15), True)
+        self.display.Context.UpdateCurrentViewer()
+
+    def rzn(self, event=None):
+        self.display.View.Rotate(0,0,math.radians(-15), True)
+        self.display.Context.UpdateCurrentViewer()
+
+    def isometric1(self, event=None):
+        self.display.View_Iso()
         self.display.FitAll()
 
-    def isometric(self, event=None):
-        self.display.View_Iso()
+    def isometric2(self, event=None):
+        self.display.View.SetProj(V3d_XposYposZpos)
+        self.display.FitAll()
+
+    def isometric3(self, event=None):
+        self.display.View.SetProj(V3d_XnegYposZpos)
+        self.display.FitAll()
+
+    def isometric4(self, event=None):
+        self.display.View.SetProj(V3d_XnegYnegZpos)
+        self.display.FitAll()
+
+    def isometric5(self, event=None):
+        self.display.View.SetProj(V3d_XposYposZneg)
+        self.display.FitAll()
+
+    def isometric6(self, event=None):
+        self.display.View.SetProj(V3d_XnegYposZneg)
+        self.display.FitAll()
+
+    def isometric7(self, event=None):
+        self.display.View.SetProj(V3d_XposYnegZneg)
+        self.display.FitAll()
+
+    def isometric8(self, event=None):
+        self.display.View.SetProj(V3d_XnegYnegZneg)
         self.display.FitAll()
 
     def reset(self, event=None):
@@ -140,6 +193,8 @@ class SCLDisplay:
 
     def scl_init_display(self):
         self.display, self.start_display, self.add_menu, self.add_function_to_menu = init_display(size='fullscreen', periodic_callback=self.periodic, period=1)
+        self.display.SetRenderingParams(Method=0, RaytracingDepth=3, IsShadowEnabled=False, IsReflectionEnabled=False, IsAntialiasingEnabled=False, IsTransparentShadowEnabled=False, StereoMode=0, AnaglyphFilter=1, ToReverseStereo=False)
+
 
         self.add_menu('View')
         self.add_function_to_menu('View', self.top)
@@ -148,10 +203,23 @@ class SCLDisplay:
         self.add_function_to_menu('View', self.right)
         self.add_function_to_menu('View', self.front)
         self.add_function_to_menu('View', self.rear)
-        self.add_function_to_menu('View', self.isometric)
+        self.add_function_to_menu('View', self.isometric1)
+        self.add_function_to_menu('View', self.isometric2)
+        self.add_function_to_menu('View', self.isometric3)
+        self.add_function_to_menu('View', self.isometric4)
+        self.add_function_to_menu('View', self.isometric5)
+        self.add_function_to_menu('View', self.isometric6)
+        self.add_function_to_menu('View', self.isometric7)
+        self.add_function_to_menu('View', self.isometric8)
         self.add_function_to_menu('View', self.perspective)
         self.add_function_to_menu('View', self.orthographic)
         self.add_function_to_menu('View', self.reset)
+        self.add_function_to_menu('View', self.rxp) # positive x rotation
+        self.add_function_to_menu('View', self.rxn) # negative x rotation
+        self.add_function_to_menu('View', self.ryp)
+        self.add_function_to_menu('View', self.ryn)
+        self.add_function_to_menu('View', self.rzp)
+        self.add_function_to_menu('View', self.rzn)
 
 
         p = gp_Pnt(0., 0., 0.)
