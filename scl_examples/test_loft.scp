@@ -1,0 +1,82 @@
+module am_spacer_drawing() {
+  /* translate([0,-16.55,17+2.54]) rotate([180,0,0]) rotate([0,0,180]) import_step("carrier_am2.step"); */
+  /* translate([0,12,18]) rotate([0,0,-90]) import_step("us2brd.step"); */
+  /* translate([25.5/2, 6.75, 10]) cylinder(d=1, h=9, center=true); */
+  /* translate([25.5/2, 6.75+10, 10]) cylinder(d=1, h=9, center=true); */
+  
+  /* translate([-25.5/2, 6.75, 10]) cylinder(d=1, h=9, center=true); */
+  /* translate([-25.5/2, 6.75+10, 10]) cylinder(d=1, h=9, center=true); */
+
+  board_top_offset_from_box_bottom=5;
+  board_thickness=2;
+  board_width=20;
+  holder_width=23;
+  holder_w = 4;
+  box_height=24;
+  holder_top = -board_top_offset_from_box_bottom-holder_w;
+  holder_bottom = -board_top_offset_from_box_bottom;
+  top_stands_distance=holder_width-holder_w;
+  bottom_stands_distance=10;
+
+  board_top_offset=1;
+  holder_h=5;
+
+
+  polygon([[holder_top,0],
+           
+           //holder top stands
+           //[holder_top, holder_width/2-top_stands_distance/2-holder_w/2],
+           [-box_height, holder_width/2-top_stands_distance/2-holder_w/2],
+           [-box_height, holder_width/2-top_stands_distance/2+holder_w/2-1],
+           [holder_top, holder_width/2-top_stands_distance/2+holder_w/2-1],
+             
+           [holder_top, holder_width/2+top_stands_distance/2-holder_w/2+1],
+           [-box_height, holder_width/2+top_stands_distance/2-holder_w/2+1],
+           [-box_height, holder_width/2+top_stands_distance/2+holder_w/2],
+           //[holder_top, holder_width/2+top_stands_distance/2+holder_w/2],
+             
+           [holder_top,holder_width],
+             
+           //far claw
+           [0,holder_width],
+           [0,holder_width-1],
+             
+           [holder_bottom+board_thickness, holder_width/2+board_width/2-0.5],
+           [holder_bottom+board_thickness, holder_width/2+board_width/2+0.5],
+             
+           [holder_bottom, holder_width/2+board_width/2+0.5],
+
+           //cutouts for top mounted components
+
+           //far
+           [holder_bottom, holder_width/2+board_width/2-1],
+           [holder_bottom-board_top_offset-0.5, holder_width/2+board_width/2-1],
+           //[holder_bottom-board_top_offset-0.5, holder_width/2+bottom_stands_distance/2+holder_w/2],
+           //[holder_bottom, holder_width/2+bottom_stands_distance/2+holder_w/2],
+           //[holder_bottom, holder_width/2+bottom_stands_distance/2-holder_w/2],
+           //[holder_bottom-board_top_offset, holder_width/2+bottom_stands_distance/2-holder_w/2],
+
+           //near
+           //[holder_bottom-board_top_offset, holder_width/2-bottom_stands_distance/2+holder_w/2],          
+           //[holder_bottom, holder_width/2-bottom_stands_distance/2+holder_w/2],
+           //[holder_bottom, holder_width/2-bottom_stands_distance/2-holder_w/2],
+           //[holder_bottom-board_top_offset-0.5, holder_width/2-bottom_stands_distance/2-holder_w/2],
+           [holder_bottom-board_top_offset-0.5, holder_width/2-board_width/2+1],
+           [holder_bottom, holder_width/2-board_width/2+1],
+
+           
+           //near claw
+           [holder_bottom, holder_width/2-board_width/2-0.5],
+
+           [holder_bottom+board_thickness, holder_width/2-board_width/2-0.5],
+           [holder_bottom+board_thickness, holder_width/2-board_width/2+0.5],
+           
+           [0,1],
+           [0,0]
+            ]);
+}
+
+loft() {
+  translate([0,0,20]) am_spacer_drawing();
+  am_spacer_drawing();
+}

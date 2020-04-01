@@ -5,9 +5,10 @@ from OCC.Core.HLRBRep import HLRBRep_HLRToShape, HLRBRep_Algo
 from OCC.Core.HLRAlgo import HLRAlgo_Projector
 from OCC.Core.gp import gp_Ax1, gp_Ax2, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec, gp_Pln, gp_Ax3
 from OCC.Core.ChFi2d import ChFi2d_AnaFilletAlgo
-from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_Transform, BRepBuilderAPI_MakeFace
+from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_Transform, BRepBuilderAPI_MakeFace, BRepBuilderAPI_MakeWire
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakePrism, BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeCone, BRepPrimAPI_MakeBox
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse, BRepAlgoAPI_Cut, BRepAlgoAPI_Common
+from OCC.Core.BRepOffsetAPI import BRepOffsetAPI_ThruSections
 from OCC.Core.TopoDS import topods, TopoDS_Compound, TopoDS_Solid
 from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_ALICEBLUE, Quantity_NOC_ANTIQUEWHITE, Quantity_NOC_BLACK, Quantity_NOC_MATRAGRAY, Quantity_NOC_YELLOW, Quantity_NOC_PERU
 from OCC.Core.Aspect import Aspect_Grid
@@ -53,6 +54,7 @@ names = {
     "stl": 0,
     "part": 0,
     "extrusion": 0,
+    "loft": 0,
     "unknown": 0,
 }
 
@@ -474,6 +476,12 @@ class SCLPart3(SCLContext):
         warning("Part contains no profile")
         return None
 
+    def get_wire(self):
+        if (self.profile != None):
+            return self.profile.get_wire()
+        warning("Part contains no profile")
+        return None
+
     def cylinder(self, r, r1, r2, d, d1, d2, h, center=False):
         nr1 = None
         nr2 = None
@@ -581,35 +589,41 @@ class SCLProfile2(SCLContext):
     def push_element(self, e):
         self.edges.append(e)
 
-    def rotate(self, x=0.0, y=0.0, z=0.0):
-        if (x!=0.0):
-            axx = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(1., 0., 0.))
-            a_trsf1 = gp_Trsf()
-            a_trsf1.SetRotation(axx, math.radians(x))
-            self.trsf = self.trsf*a_trsf1
+    # def rotate(self, x=0.0, y=0.0, z=0.0):
+    #     if (x!=0.0):
+    #         axx = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(1., 0., 0.))
+    #         a_trsf1 = gp_Trsf()
+    #         a_trsf1.SetRotation(axx, math.radians(x))
+    #         self.trsf = self.trsf*a_trsf1
 
-        if (y!=0.0):
-            axy = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(0., 1., 0.))
-            a_trsf2 = gp_Trsf()
-            a_trsf2.SetRotation(axy, math.radians(y))
-            self.trsf = self.trsf*a_trsf2
+    #     if (y!=0.0):
+    #         axy = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(0., 1., 0.))
+    #         a_trsf2 = gp_Trsf()
+    #         a_trsf2.SetRotation(axy, math.radians(y))
+    #         self.trsf = self.trsf*a_trsf2
 
-        if (z!=0.0):
-            axz = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(0., 0., 1.))
-            a_trsf3 = gp_Trsf()
-            a_trsf3.SetRotation(axz, math.radians(z))
-            self.trsf = self.trsf*a_trsf3
+    #     if (z!=0.0):
+    #         axz = gp_Ax1(gp_Pnt(0., 0., 0.), gp_Dir(0., 0., 1.))
+    #         a_trsf3 = gp_Trsf()
+    #         a_trsf3.SetRotation(axz, math.radians(z))
+    #         self.trsf = self.trsf*a_trsf3
 
-    def mirror(self, x=0.0, y=0.0, z=0.0):
-        if (x==0 and y== 0 and z==0):
-            warning("Warning: no axis to mirror")
-            return
-        trsf = gp_Trsf()
+    # def mirror(self, x=0.0, y=0.0, z=0.0):
+    #     if (x==0 and y== 0 and z==0):
+    #         warning("Warning: no axis to mirror")
+    #         return
+    #     trsf = gp_Trsf()
 
-        d = gp_Dir(x, y, z)
-        p = gp_Pnt()
-        trsf.SetMirror(gp_Ax1(p, d))
-        self.trsf = self.trsf*trsf
+    #     d = gp_Dir(x, y, z)
+    #     p = gp_Pnt()
+    #     trsf.SetMirror(gp_Ax1(p, d))
+    #     self.trsf = self.trsf*trsf
+
+    def transform(self, trsf):
+        self.wire = topods.Wire(BRepBuilderAPI_Transform(self.get_wire(), trsf, True).Shape())
+
+    def apply_trsf(self, trsf):
+        self.transform(trsf)
 
     def get_wire(self):
         if (self.wire == None):
@@ -632,6 +646,7 @@ class SCLProfile2(SCLContext):
             trsf_wire = BRepBuilderAPI_Transform(self.wire, self.trsf)
             trsf_shape = trsf_wire.Shape()
             self.wire = topods.Wire(trsf_shape)
+            self.face = None
         return self.wire
 
     def get_face(self):
@@ -676,6 +691,57 @@ class SCLExtrude(SCLContext):
 
     def display(self, writer=None):
         debug("Display SCLExtrude")
+        debug("Children: %s"%(repr(self.children),))
+        for c in self.children:
+            c.display(writer)
+
+        if self.shape != None:
+            self.shape.display(writer)
+
+def collect_wires(this):
+    wires = []
+    for c in this.children:
+        if not isinstance(c, SCLProfile2):
+            collected_wires = collect_wires(c)
+            wires+=collected_wires
+        else:
+            w = c.get_wire()
+            if w!=None:
+                wires.append(w)
+    return wires
+
+class SCLLoft(SCLContext):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.shape = None
+
+    def apply_trsf(self, trsf):
+        if self.shape != None:
+            self.shape.transform(trsf)
+
+    def loft(self, solid=True, ruled=True, precision=0.000001):
+        wires = collect_wires(self)
+
+        self.children = []
+
+        generator = BRepOffsetAPI_ThruSections(solid, ruled, precision)
+
+        for w in wires:
+            debug("wire: %s"%(str(w),))
+            generator.AddWire(w)
+        generator.Build()
+
+        shape = generator.Shape()
+        scls = SCLShape(shape)
+        sclp = SCLPart3(self)
+        sclp.set_shape(scls)
+        name = get_inc_name("loft")
+        sclp.set_name(name)
+        debug("Creating loft %s"%(name,))
+        self.add_child_context(sclp)
+
+    def display(self, writer=None):
+        debug("Display SCLLoft")
         debug("Children: %s"%(repr(self.children),))
         for c in self.children:
             c.display(writer)
