@@ -38,7 +38,7 @@ build-deb-package:
 
 .PHONY: build-appimage
 build-appimage:
-	@echo "Building appimage"; 
+	@echo "Building appimage"; bash ./packaging/build_appimage.sh
 
 .PHONY: build-package
 build-package: $(BUILD_DIR)/$(PYOCC_BUILD_DIR)
