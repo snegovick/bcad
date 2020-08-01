@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=bcad
+Exec=bcad-launcher
+Icon=bcad
+Type=Application
+Terminal=true
+Categories=Utility;

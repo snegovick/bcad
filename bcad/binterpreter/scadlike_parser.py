@@ -202,7 +202,8 @@ class ScadLikeParser(ScadLikeLex):
                            | TRANSLATE parameters action_child_block
                            | PROJECTION parameters action_child_block
                            | COLOR parameters action_child_block
-                           | DISPLAY_WIREFRAME parameters action_child_block'''
+                           | DISPLAY_WIREFRAME parameters action_child_block
+                           | LOFT parameters action_child_block'''
         p[0] = {'type': 'stat_builtin', 'id': p[1], 'args': p[2], 'block': p[3], 'line': p.lineno(1)}
 
     def p_function_definition(self, p):

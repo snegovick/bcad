@@ -8,8 +8,8 @@ from setuptools import setup
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-data_files = [('/usr/bin', ['bcad-launcher'])]+[[os.path.join('/usr/share/python3-bcad/', dp), [os.path.join(dp, f) for f in fn]] for dp, dn, fn in list(os.walk('ext/usr'))[1:]]
-print(data_files)
+#data_files = [('/usr/bin', ['bcad-launcher'])]+[[os.path.join('/usr/share/python3-bcad/', dp), [os.path.join(dp, f) for f in fn]] for dp, dn, fn in list(os.walk('ext/usr'))[1:]]
+#print(data_files)
 setup(
     name = "bcad",
     version = "0.1",
@@ -23,7 +23,7 @@ setup(
     long_description=read('README.md'),
     dependency_links = [],
     install_requires = [],
-    data_files = data_files,
+    data_files = [('usr/bin', ['bcad-launcher'])],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: MIT License",

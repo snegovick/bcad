@@ -55,6 +55,7 @@ bsuite_reserved = {
     'import_step': 'IMPORT_STEP',
     'import_stl': 'IMPORT_STL',
     'display_wireframe': 'DISPLAY_WIREFRAME',
+    'loft': 'LOFT',
 }
 
 reserved.update(bsuite_reserved)

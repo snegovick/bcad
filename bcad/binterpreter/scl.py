@@ -18,7 +18,7 @@ from bcad.binterpreter.events import EVEnum, EventProcessor, ee, ep
 from bcad.binterpreter.singleton import Singleton
 from bcad.binterpreter.scl_writer import SCLSTLWriter, SCLSTEPWriter, SCLDXFWriter
 from bcad.binterpreter.scl_util import Noval, unstringify, sign
-from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLIntersection, SCLDifference, SCLProjection, SCLPart3, get_inc_name
+from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLIntersection, SCLDifference, SCLProjection, SCLPart3, SCLLoft, get_inc_name
 
 debug_parser=False
 debug_expr_en = False
@@ -130,6 +130,9 @@ reverse_function_definition = {'type': 'stat_function_definition', 'id': 'revers
 
 concat_function_definition = {'type': 'stat_function_definition', 'id': 'concat', 'line': 0, 'args': [
 ]}
+loft_module_definition = {'type': 'stat_module_definition', 'id': 'loft', 'line': 0, 'args': [{'type': 'expr_assign', 'id': 'solid', 'val': {'type': 'expr_bool', 'val': True, 'line': 0}, 'line': 0},
+                                                                                              {'type': 'expr_assign', 'id': 'ruled', 'val': {'type': 'expr_bool', 'val': True, 'line': 0}, 'line': 0},
+                                                                                              {'type': 'expr_assign', 'id': 'precision', 'val': {'type': 'expr_number', 'val': 0.000001, 'line': 0}, 'line': 0}]}
 
 class SCLFrame:
     def __init__(self):
@@ -579,6 +582,31 @@ class SCL:
                         self.pop_stack()
                         self.pop_context()
                     debug("Leave linear extrude")
+                    self.pop_stack()
+                elif s['id'] == 'loft':
+                    self.push_stack()
+                    if debug_parser:
+                        self.parse_block(s['block'])
+                    else:
+                        self.push_context(SCLLoft, get_inc_name("loft"))
+                        self.parse_block(s['block'])
+                        self.push_stack()
+                        self.parse_kwargs(s['id'], s['line'], loft_module_definition['args'], s['args'])
+                        solid = True
+                        ruled = True
+                        precision = 0.000001
+                        top = self.stack[-1]
+                        if (top.has_variable('solid', s['line'])):
+                            solid = self.find_variable_value('solid', s['line'])
+                        if (top.has_variable('ruled', s['line'])):
+                            ruled = self.find_variable_value('ruled', s['line'])
+                        if (top.has_variable('precision', s['line'])):
+                            precision = self.find_variable_value('precision', s['line'])
+                        debug("Call builtin loft(%s, %s, %f)"%(str(solid), str(ruled), precision))
+                        self.active_context.loft(solid, ruled, precision)
+                        self.pop_stack()
+                        self.pop_context()
+                    debug("Leave loft")
                     self.pop_stack()
                 elif s['id']=='profile':
                     debug("Profile")
