@@ -182,7 +182,7 @@ class SCLFrame:
         self.modules[mname] = value
 
 class SCL:
-    def __init__(self, data=None, path=None, output_path=None, verbose=3):
+    def __init__(self, data=None, path=None, output_path=None, verbose=3, extra={}):
         debug('SCL data: %s, path: %s'%(data, path))
         self.output_path = output_path
         self.data = data
@@ -231,6 +231,9 @@ class SCL:
                 writer = SCLSTEPWriter()
             elif (ext == '.stl'):
                 writer = SCLSTLWriter()
+                if (("linear-deflection" in self.extra) and
+                    ("angular-deflection" in self.extra)):
+                    writer.set_resolution(self.extra["linear-deflection"], self.extra["angular-deflection"])
             elif (ext == '.dxf'):
                 writer = SCLDXFWriter()
             
@@ -1082,8 +1085,11 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', help='file to read', required=True, type=str)
     parser.add_argument('--output', help='file to write', required=False, type=str)
+    parser.add_argument('--linear-deflection', help='Linear deflection parameter of SCL writer', required=False, type=float, default=1.0)
+    parser.add_argument('--angular-deflection', help='Angular deflection parameter of SCL writer', required=False, type=float, default=1.0)
     parser.add_argument('--verbose', help='Verbose level, when set to 0: print only critical errors, 4+: print all debug messages, 3: default', required=False, type=int, default=3)
     args = parser.parse_args()
-    Singleton.scl = SCL(path=args.file, output_path=args.output, verbose=args.verbose)
+    Singleton.scl = SCL(path=args.file, output_path=args.output, verbose=args.verbose, extra={"linear-deflection": args.linear_deflection,
+                                                                                              "angular-deflection": args.angular_deflection})
     ep.push_event(ee.main_start, args)
     ep.process()
