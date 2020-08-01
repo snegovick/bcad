@@ -53,4 +53,9 @@ endif
 clean:
 	rm -rf $(DIR_DEB)
 	rm -rf $(DIR_APPIMAGE)
+
+.PHONY: dist-clean
+dist-clean:
+	rm -rf $(DIR_DEB)
+	rm -rf $(DIR_APPIMAGE)
 	git clean -fd
