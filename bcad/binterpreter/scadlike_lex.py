@@ -117,7 +117,7 @@ class ScadLikeLex(object):
     t_ESQUARE        = r'\]'
     t_DOT            = r'\.'
     t_STRING         = r'"[^"]*"'
-    t_USESTRING      = r'<[\w_\.]*>'
+    t_USESTRING      = r'<[^">]*>'
     t_ISEQUAL        = r'=='
     t_ISNOTEQUAL     = r'!='
     t_GE             = r'>='

@@ -184,6 +184,7 @@ class SCLFrame:
 class SCL:
     def __init__(self, data=None, path=None, output_path=None, verbose=3, extra={}):
         debug('SCL data: %s, path: %s'%(data, path))
+        self.extra = extra
         self.output_path = output_path
         self.data = data
         if self.output_path == None:
@@ -1027,11 +1028,14 @@ class SCL:
             filename, ext = os.path.splitext(path)
             base_paths = [os.getcwd(), os.path.dirname(os.path.abspath(self.path))]
             paths = [os.path.join(bp, path) for bp in base_paths]
+            debug('paths: %s'%(repr(paths),))
             file_found = False
             for p in paths:
                 if os.path.isfile(p):
                     debug("Using path %s"%(p,))
                     parser = None
+                    old_path = self.path
+                    self.path = p
                     if ext == '.sck':
                         self.push_context(SCLProfile2, get_inc_name("profile2"))
                     elif (ext == '.scp') or (ext == '.scad'):
@@ -1050,6 +1054,7 @@ class SCL:
                     for s in parser.data:
                         self.parse_statement(s, use=True)
                     self.pop_context()
+                    self.path=old_path
                     file_found = True
                     break
             if (not file_found):
@@ -1063,6 +1068,8 @@ class SCL:
                 if os.path.isfile(p):
                     debug("Including path %s"%(path,))
                     parser = None
+                    old_path = self.path
+                    self.path = p
                     try:
                         parser = ScadLikeParser(data=None, path=p, debug=self.debug)
                         ep.push_event(ee.parse_file, p)
@@ -1073,6 +1080,7 @@ class SCL:
                     debug(json.dumps(parser.data, indent=2))
                     for s in parser.data:
                         self.parse_statement(s)
+                    self.path=old_path
                     file_found = True
                     break
             if (not file_found):
