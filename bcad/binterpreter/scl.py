@@ -124,6 +124,18 @@ sqrt_function_definition = {'type': 'stat_function_definition', 'id': 'sqrt', 'l
     {'type': 'expr_assign', 'id': 'v', 'val': {'type': 'expr_number', 'val': 0.0, 'line': 0}, 'line': 0}
 ]}
 
+sin_function_definition = {'type': 'stat_function_definition', 'id': 'sin', 'line': 0, 'args': [
+    {'type': 'expr_assign', 'id': 'v', 'val': {'type': 'expr_number', 'val': 0.0, 'line': 0}, 'line': 0}
+]}
+
+cos_function_definition = {'type': 'stat_function_definition', 'id': 'cos', 'line': 0, 'args': [
+    {'type': 'expr_assign', 'id': 'v', 'val': {'type': 'expr_number', 'val': 0.0, 'line': 0}, 'line': 0}
+]}
+
+tan_function_definition = {'type': 'stat_function_definition', 'id': 'tan', 'line': 0, 'args': [
+    {'type': 'expr_assign', 'id': 'v', 'val': {'type': 'expr_number', 'val': 0.0, 'line': 0}, 'line': 0}
+]}
+
 reverse_function_definition = {'type': 'stat_function_definition', 'id': 'reverse', 'line': 0, 'args': [
     {'type': 'expr_assign', 'id': 'v', 'line': 0, 'val': {'type': 'array_list', 'val': [], 'line': 0}}
 ]}
@@ -470,8 +482,32 @@ class SCL:
                     ov+=val
                 debug_expr("Call builtin concat %s"%(str(ov),))
                 ret = ov
+            elif e['id'] == 'sin':
+                self.parse_kwargs(e['id'], e['line'], sin_function_definition['args'], e['args'], debug_expr)
+                top = self.stack[-1]
+                v = 0
+                if (top.has_variable('v', e['line'])):
+                    v = self.find_variable_value('v', e['line'], debug_expr)
+                debug_expr("Call builtin sin(%f)"%(v,))
+                ret = math.sin(math.radians(v))
+            elif e['id'] == 'cos':
+                self.parse_kwargs(e['id'], e['line'], cos_function_definition['args'], e['args'], debug_expr)
+                top = self.stack[-1]
+                v = 0
+                if (top.has_variable('v', e['line'])):
+                    v = self.find_variable_value('v', e['line'], debug_expr)
+                debug_expr("Call builtin cos(%f)"%(v,))
+                ret = math.cos(math.radians(v))
+            elif e['id'] == 'tan':
+                self.parse_kwargs(e['id'], e['line'], tan_function_definition['args'], e['args'], debug_expr)
+                top = self.stack[-1]
+                v = 0
+                if (top.has_variable('v', e['line'])):
+                    v = self.find_variable_value('v', e['line'], debug_expr)
+                debug_expr("Call builtin tan(%f)"%(v,))
+                ret = math.tan(math.radians(v))
             else:
-                cbl = self.find_function(e['id'], e['line'], debug_expr)
+                cbl = self.find_function(e['id'], e['line'])
                 debug_expr('Found function %s'%(e['id'],))
                 self.parse_kwargs(e['id'], e['line'], cbl['args'], e['args'], debug_expr)
                 ret = self.parse_expr(cbl['expression'])
