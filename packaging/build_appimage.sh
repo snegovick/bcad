@@ -73,7 +73,7 @@ if [ ${MINICONDA} -eq 1 ]; then
         echo "Activating envinronment"
         source usr/bin/activate
         echo "Installing deps"
-        usr/bin/pip install --force-reinstall PyQt5 PyOpenGL PyOpenGL_accelerate numpy watchdog pyinotify six ply
+        usr/bin/pip install --force-reinstall PyQt5 PyOpenGL PyOpenGL_accelerate numpy watchdog pyinotify six ply glfw imgui[glfw] Pillow
         echo "pip: $(which -a pip)"
 
         # if [ ! -e ply ]; then
@@ -111,7 +111,7 @@ if [ ${MINICONDA} -eq 1 ]; then
 
     if [ ! -e ${PYOCC_GIT} ]; then
     	  echo "Obtaining Python-OCC"
-        git clone ${PYOCC_GIT_URL}
+        git clone ${PYOCC_GIT_URL} -b bcad_noswap_7.4.0
     else
         echo "Python-OCC git already cloned, skip"
     fi
@@ -163,10 +163,14 @@ if [ ${MINICONDA} -eq 1 ]; then
 
     popd
 
-    echo "Copy all modules into python3.8 path"
-    # rm -rf ${APPDIR}/usr/lib/python3/dist-packages/__pycache__
-    # mv ${APPDIR}/usr/lib/python3/dist-packages/* ${APPDIR}/usr/lib/python3.8
-    mv ${APPDIR_T}/usr/lib/python3/site-packages/* ${APPDIR_T}/usr/lib/python3.8
+    if [ ! -n "$(find ${APPDIR_T}/usr/lib/python3/site-packages/ -maxdepth 0 -empty)" ]; then
+        echo "Copy all modules into python3.8 path"
+        # rm -rf ${APPDIR}/usr/lib/python3/dist-packages/__pycache__
+        # mv ${APPDIR}/usr/lib/python3/dist-packages/* ${APPDIR}/usr/lib/python3.8
+        mv ${APPDIR_T}/usr/lib/python3/site-packages/* ${APPDIR_T}/usr/lib/python3.8
+    else
+        echo "Modules are already moved into python3.8 path"
+    fi
 
     ${APPDIR_T}/usr/bin/python3.8 setup.py build -j$(nproc) install --prefix ${APPDIR_T}/usr
     pushd ${APPDIR_T}/usr/lib/python3.8/site-packages
@@ -516,6 +520,14 @@ else
     fi
 fi
 
+# cat >"AppRun" <<\EOF
+# #!/bin/sh
+# set -e
+# APPDIR="$(dirname "$(readlink -e "$0")")"
+# export LD_LIBRARY_PATH="${APPDIR}/usr/lib/:${APPDIR}/lib/x86_64-linux-gnu:${APPDIR}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+# export PATH="${APPDIR}/usr/bin:${PATH}"
+# exec "${APPDIR}/usr/bin/python3.8" -m bcad.binterpreter.glfw_display "$@"
+# EOF
 cat >"AppRun" <<\EOF
 #!/bin/sh
 set -e

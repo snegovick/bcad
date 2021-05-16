@@ -71,8 +71,6 @@ class SCLDisplay:
     def __init__(self):
         self.display = None
         self.start_display = None
-        self.add_menu = None
-        self.add_function_to_menu = None
         self.scl_init_display()
 
     def mk_colored_line(self, start, direction, color, linestyle, width):
@@ -194,34 +192,34 @@ class SCLDisplay:
         ep.process()
 
     def scl_init_display(self):
-        self.display, self.start_display, self.add_menu, self.add_function_to_menu = init_display(size='fullscreen', periodic_callback=self.periodic, period=1)
+        self.display, self.start_display = init_display(periodic_callback=self.periodic, period=1)
         self.display.SetRenderingParams(Method=0, RaytracingDepth=3, IsShadowEnabled=False, IsReflectionEnabled=False, IsAntialiasingEnabled=False, IsTransparentShadowEnabled=False, StereoMode=0, AnaglyphFilter=1, ToReverseStereo=False)
 
 
-        self.add_menu('View')
-        self.add_function_to_menu('View', self.top)
-        self.add_function_to_menu('View', self.bottom)
-        self.add_function_to_menu('View', self.left)
-        self.add_function_to_menu('View', self.right)
-        self.add_function_to_menu('View', self.front)
-        self.add_function_to_menu('View', self.rear)
-        self.add_function_to_menu('View', self.isometric1)
-        self.add_function_to_menu('View', self.isometric2)
-        self.add_function_to_menu('View', self.isometric3)
-        self.add_function_to_menu('View', self.isometric4)
-        self.add_function_to_menu('View', self.isometric5)
-        self.add_function_to_menu('View', self.isometric6)
-        self.add_function_to_menu('View', self.isometric7)
-        self.add_function_to_menu('View', self.isometric8)
-        self.add_function_to_menu('View', self.perspective)
-        self.add_function_to_menu('View', self.orthographic)
-        self.add_function_to_menu('View', self.reset)
-        self.add_function_to_menu('View', self.rxp) # positive x rotation
-        self.add_function_to_menu('View', self.rxn) # negative x rotation
-        self.add_function_to_menu('View', self.ryp)
-        self.add_function_to_menu('View', self.ryn)
-        self.add_function_to_menu('View', self.rzp)
-        self.add_function_to_menu('View', self.rzn)
+        # self.add_menu('View')
+        # self.add_function_to_menu('View', self.top)
+        # self.add_function_to_menu('View', self.bottom)
+        # self.add_function_to_menu('View', self.left)
+        # self.add_function_to_menu('View', self.right)
+        # self.add_function_to_menu('View', self.front)
+        # self.add_function_to_menu('View', self.rear)
+        # self.add_function_to_menu('View', self.isometric1)
+        # self.add_function_to_menu('View', self.isometric2)
+        # self.add_function_to_menu('View', self.isometric3)
+        # self.add_function_to_menu('View', self.isometric4)
+        # self.add_function_to_menu('View', self.isometric5)
+        # self.add_function_to_menu('View', self.isometric6)
+        # self.add_function_to_menu('View', self.isometric7)
+        # self.add_function_to_menu('View', self.isometric8)
+        # self.add_function_to_menu('View', self.perspective)
+        # self.add_function_to_menu('View', self.orthographic)
+        # self.add_function_to_menu('View', self.reset)
+        # self.add_function_to_menu('View', self.rxp) # positive x rotation
+        # self.add_function_to_menu('View', self.rxn) # negative x rotation
+        # self.add_function_to_menu('View', self.ryp)
+        # self.add_function_to_menu('View', self.ryn)
+        # self.add_function_to_menu('View', self.rzp)
+        # self.add_function_to_menu('View', self.rzn)
 
 
         p = gp_Pnt(0., 0., 0.)
