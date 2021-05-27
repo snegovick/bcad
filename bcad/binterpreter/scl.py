@@ -230,7 +230,7 @@ class SCL:
             self.root = SCLProfile2(None)
         elif ((ext == '.scp') or (ext == '.scad')):
             self.root = SCLPart3(None)
-        elif ((ext == '.stp') or (ext == '.step')):
+        elif ((ext == '.stp') or (ext == '.step') or (ext == '.STP') or (ext == '.STEP')):
             self.root = SCLPart3(None)
             self.root.import_step(self.path)
             run_parser = False
@@ -1078,7 +1078,7 @@ class SCL:
                         self.push_context(SCLPart3, get_inc_name("part"))
                     else:
                         critical("%s:%i Unknown file type %s"%(self.path, s['line'], path,))
-                        
+
                     try:
                         parser = ScadLikeParser(data=None, path=p, debug=self.debug)
                         ep.push_event(ee.parse_file, p)
