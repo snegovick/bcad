@@ -73,7 +73,7 @@ if [ ${MINICONDA} -eq 1 ]; then
         echo "Activating envinronment"
         source usr/bin/activate
         echo "Installing deps"
-        usr/bin/pip install --force-reinstall PyQt5 PyOpenGL PyOpenGL_accelerate numpy watchdog pyinotify six ply glfw imgui[glfw] Pillow
+        usr/bin/pip install --force-reinstall PyOpenGL PyOpenGL_accelerate numpy watchdog pyinotify ply glfw imgui[glfw]
         echo "pip: $(which -a pip)"
 
         # if [ ! -e ply ]; then
