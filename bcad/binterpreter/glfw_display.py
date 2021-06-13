@@ -27,6 +27,7 @@ class glfwViewer3d:
         self.pipe = None
         self.view_size = [1280, 1024]
         self.waiting_reply = False
+        self.need_resize = False
 
     def set_pipe(self, pipe):
         self.pipe = pipe
@@ -87,6 +88,17 @@ class glfwViewer3d:
         # glfw.set_mouse_button_callback(self.window, self.mouse_button_event)
         # glfw.set_cursor_pos_callback(self.window, self.mouse_move_event)
         # glfw.set_key_callback(self.window, self.keyPressEvent)
+
+    def proc(self):
+        w, h = glfw.get_window_size(self.window)
+        if (self.view_size[0] != w) or (self.view_size[1] != h):
+            self.view_size = (w, h)
+            self.need_resize = True
+
+    def get_need_resize(self):
+        need_resize = self.need_resize
+        self.need_resize = False
+        return need_resize
 
     def draw_image_quad(self):
         gl.glUseProgram(self.shader);
@@ -201,6 +213,9 @@ class glfwViewer3d:
         gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, w, h, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, data)
 
+    def set_image_black(self):
+        self.set_image(self.view_size[0], self.view_size[1], b'\0'*self.view_size[0]*self.view_size[1]*4)
+
     def start_frame(self):
         gl.glClearColor(1., 1., 1., 1)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
@@ -253,7 +268,7 @@ def RunGLFWDisplay(target_proc=None, cmdline_args=None):
             self.win = None
 
         def run(self, target_proc, cmdline_args=None):
-            self.img = shared_memory.SharedMemory(create=True, size=1280*1024*4)
+            self.img = shared_memory.SharedMemory(create=True, size=4096*2160*4) # true 4k for now, just in case. TODO: realloc dynamically
             parent_conn, child_conn = Pipe()
             self.parent_conn = parent_conn
             self.child_conn = child_conn

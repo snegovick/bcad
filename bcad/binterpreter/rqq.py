@@ -20,12 +20,14 @@ requests = {
     RQ_PAN           : 8,
 }
 
-RP_IMAGE_DATA = 'image_data'
-RP_ACK        = 'ack'
+RP_IMAGE_DATA    = 'image_data'
+RP_ACK           = 'ack'
+RP_ACK_SET_SIZE  = 'ack_set_size'
 
 replies = {
-    RP_IMAGE_DATA: 1,
-    RP_ACK:        2,
+    RP_IMAGE_DATA:   1,
+    RP_ACK:          2,
+    RP_ACK_SET_SIZE: 3,
 }
 
 class rqItem:
@@ -72,7 +74,7 @@ class rqQueue:
         self.push_back(rqItem(RQ_LOAD_IMAGE, None, False))
 
     def rq_set_size(self, w, h):
-        self.push_back(rqItem(RQ_SET_SIZE, [w, h], False))
+        self.push_back(rqItem(RQ_SET_SIZE, [w, h], True))
 
     def rq_scroll(self, delta):
         self.push_back(rqItem(RQ_SCROLL, delta, False))

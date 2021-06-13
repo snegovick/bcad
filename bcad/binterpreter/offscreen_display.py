@@ -51,8 +51,9 @@ class offscreenViewer3d:
     def call_set_size(self, w, h):
         print("call set size", w, h)
         self._display.SetSize(w, h)
+        self.repaint()
         self.update_img()
-        self.pipe.send(json.dumps({'rp': replies[RP_ACK]}))
+        self.pipe.send(json.dumps({'rp': replies[RP_ACK_SET_SIZE], 'args': [w, h]}))
 
     def call_load_image(self):
         print("call load image")

@@ -15,6 +15,7 @@ class MainWindow():
         self.rqq = rqQueue()
         self.texture_updated = False
         self.prev_pos = [0, 0]
+        self.offscreen_view_size = [0,0]
 
         if self.use_imgui:
             print("Creating IMGUI context")
@@ -38,10 +39,23 @@ class MainWindow():
         rp = self.canva.pipe.recv()
         jdata = json.loads(rp)
         if jdata['rp'] == replies[RP_IMAGE_DATA]:
-            self.canva.set_image(self.canva.view_size[0], self.canva.view_size[1], data=self.canva.img.buf)
+            if (self.offscreen_view_size[0] == self.canva.view_size[0]) and (self.offscreen_view_size[1] == self.canva.view_size[1]):
+                self.canva.set_image(self.canva.view_size[0], self.canva.view_size[1], data=self.canva.img.buf)
+            else:
+                self.canva.set_image_black()
             self.canva.reply_received()
         elif jdata['rp'] == replies[RP_ACK]:
-            self.canva.set_image(self.canva.view_size[0], self.canva.view_size[1], data=self.canva.img.buf)
+            if (self.offscreen_view_size[0] == self.canva.view_size[0]) and (self.offscreen_view_size[1] == self.canva.view_size[1]):
+                self.canva.set_image(self.canva.view_size[0], self.canva.view_size[1], data=self.canva.img.buf)
+            else:
+                self.canva.set_image_black()
+            self.canva.reply_received()
+        elif jdata['rp'] == replies[RP_ACK_SET_SIZE]:
+            self.offscreen_view_size = [jdata['args'][0], jdata['args'][1]]
+            if (self.offscreen_view_size[0] == self.canva.view_size[0]) and (self.offscreen_view_size[1] == self.canva.view_size[1]):
+                self.canva.set_image(self.canva.view_size[0], self.canva.view_size[1], data=self.canva.img.buf)
+            else:
+                self.canva.set_image_black()
             self.canva.reply_received()
 
     def mainloop(self):
@@ -54,6 +68,14 @@ class MainWindow():
             self.parse_reply()
             self.rqq.rq_load_image()
             while (not self.canva.should_close() and (not self.please_stop)):
+                self.canva.proc()
+                if self.canva.get_need_resize():
+                    self.canva.set_image_black()
+                    self.rqq.rq_set_size(self.canva.view_size[0], self.canva.view_size[1])
+                    self.canva.start_frame()
+                    self.canva.swap_buffers()
+                    self.canva.poll_events()
+                    continue
                 self.rqq.process(self.canva)
                 if self.canva.pipe.poll() == True:
                     self.parse_reply()
@@ -105,7 +127,6 @@ class MainWindow():
                             self.prev_pos = pos
 
                 self.canva.start_frame()
-                self.canva.draw_image_quad()
                 imgui.render()
                 draw_data = imgui.get_draw_data()
                 self.impl.render(draw_data)
