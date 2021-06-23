@@ -20,6 +20,7 @@ class WatchdogHandler(pyinotify.ProcessEvent):
 
     def process_IN_MODIFY(self, event):
         debug("Received modified event - %s." % event.pathname)
+        Singleton.should_redraw = True
         if (event.pathname == Singleton.root_file):
             info("Reloading root file")
         else:
@@ -47,6 +48,7 @@ class EventProcessor(object):
     def __init__(self):
         Singleton.ee = self.ee
         Singleton.ep = self
+        Singleton.should_redraw = False
         self.started = False
         self.events = {
             self.ee.main_start: [self.main_start],

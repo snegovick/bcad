@@ -1,7 +1,9 @@
 import bcad.binterpreter.boccviewer as OCCViewer
-import json
 
+from bcad.binterpreter.singleton import Singleton
 from bcad.binterpreter.rqq import *
+
+import json
 
 class offscreenViewer3d:
     def __init__(self, *kargs):
@@ -83,3 +85,12 @@ class offscreenViewer3d:
         self._display.Pan(int(x), -int(y))
         self.update_img()
         self.pipe.send(json.dumps({'rp': replies[RP_ACK]}))
+
+    def call_check_redraw(self):
+        if Singleton.should_redraw == True:
+            Singleton.should_redraw = False
+            print("should redraw")
+            self.update_img()
+            self.pipe.send(json.dumps({'rp': replies[RP_ACK]}))
+        else:
+            self.pipe.send(json.dumps({'rp': replies[RP_NOP]}))

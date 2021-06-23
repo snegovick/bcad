@@ -8,6 +8,7 @@ RQ_STOP           = 'stop'
 RQ_SCROLL         = 'scroll'
 RQ_MOVE           = 'move'
 RQ_PAN            = 'pan'
+RQ_CHECK_REDRAW   = 'check_redraw'
 
 requests = {
     RQ_LOAD_IMAGE    : 1,
@@ -18,16 +19,19 @@ requests = {
     RQ_SCROLL        : 6,
     RQ_MOVE          : 7,
     RQ_PAN           : 8,
+    RQ_CHECK_REDRAW  : 9,
 }
 
 RP_IMAGE_DATA    = 'image_data'
 RP_ACK           = 'ack'
 RP_ACK_SET_SIZE  = 'ack_set_size'
+RP_NOP           = 'nop'
 
 replies = {
     RP_IMAGE_DATA:   1,
     RP_ACK:          2,
     RP_ACK_SET_SIZE: 3,
+    RP_NOP:          4,
 }
 
 class rqItem:
@@ -63,6 +67,7 @@ class rqQueue:
             current_rq = self.q[0]
             if current_rq.send(viewer) == True:
                 self.pop_front()
+        return len(self.q)
 
     def rq_start_rotation(self, x, y):
         self.push_back(rqItem(RQ_START_ROTATION, [x, y], False))
@@ -85,3 +90,6 @@ class rqQueue:
     def rq_pan(self, x, y):
         print("rq pan", x, y)
         self.push_back(rqItem(RQ_PAN, [x, y], False))
+
+    def rq_check_redraw(self):
+        self.push_back(rqItem(RQ_CHECK_REDRAW, None, False))

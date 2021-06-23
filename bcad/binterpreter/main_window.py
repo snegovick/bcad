@@ -2,10 +2,14 @@ from bcad.binterpreter.rqq import *
 from bcad.binterpreter.offscreen_display import offscreenViewer3d
 from bcad.binterpreter.glfw_display import glfwViewer3d
 
+from bcad.binterpreter.events import EVEnum, EventProcessor, ee, ep
+from bcad.binterpreter.singleton import Singleton
+
 import imgui
 from imgui.integrations.glfw import GlfwRenderer
 
 import json
+import time
 
 class MainWindow():
     def __init__(self, gui=True, pipe=None, img=None):
@@ -57,6 +61,8 @@ class MainWindow():
             else:
                 self.canva.set_image_black()
             self.canva.reply_received()
+        elif jdata['rp'] == replies[RP_NOP]:
+            self.canva.reply_received()
 
     def mainloop(self):
         if self.use_imgui:
@@ -67,7 +73,9 @@ class MainWindow():
             self.rqq.process(self.canva)
             self.parse_reply()
             self.rqq.rq_load_image()
+            last = time.time()
             while (not self.canva.should_close() and (not self.please_stop)):
+                current = time.time()
                 self.canva.proc()
                 if self.canva.get_need_resize():
                     self.canva.set_image_black()
@@ -76,7 +84,10 @@ class MainWindow():
                     self.canva.swap_buffers()
                     self.canva.poll_events()
                     continue
-                self.rqq.process(self.canva)
+                qlen = self.rqq.process(self.canva)
+                if (current-last)>1:
+                    last = current
+                    self.rqq.rq_check_redraw()
                 if self.canva.pipe.poll() == True:
                     self.parse_reply()
                 self.impl.process_inputs()
@@ -137,25 +148,30 @@ class MainWindow():
             print("GUI stopped")
         else:
             while True:
-                rq = self.canva.pipe.recv()
-                jdata = json.loads(rq)
-                #print("rq:", rq, "jdata:", type(jdata))
-                if jdata['rq'] == requests[RQ_LOAD_IMAGE]:
-                    tex = self.canva.call_load_image()
-                elif jdata['rq'] == requests[RQ_START_ROTATION]:
-                    self.canva.call_start_rotation(jdata['args'][0], jdata['args'][1])
-                elif jdata['rq'] == requests[RQ_ROTATE]:
-                    self.canva.call_rotate(jdata['args'][0], jdata['args'][1])
-                elif jdata['rq'] == requests[RQ_SET_SIZE]:
-                    self.canva.call_set_size(jdata['args'][0], jdata['args'][1])
-                elif jdata['rq'] == requests[RQ_SCROLL]:
-                    self.canva.call_scroll(jdata['args'])
-                elif jdata['rq'] == requests[RQ_MOVE]:
-                    self.canva.call_move(jdata['args'][0], jdata['args'][1])
-                elif jdata['rq'] == requests[RQ_PAN]:
-                    self.canva.call_pan(jdata['args'][0], jdata['args'][1])
-                elif jdata['rq'] == requests[RQ_STOP]:
-                    break
+                ep.process()
+                if self.canva.pipe.poll() == True:
+                    rq = self.canva.pipe.recv()
+                    jdata = json.loads(rq)
+                    #print("rq:", rq, "jdata:", type(jdata))
+                    if jdata['rq'] == requests[RQ_LOAD_IMAGE]:
+                        tex = self.canva.call_load_image()
+                    elif jdata['rq'] == requests[RQ_START_ROTATION]:
+                        self.canva.call_start_rotation(jdata['args'][0], jdata['args'][1])
+                    elif jdata['rq'] == requests[RQ_ROTATE]:
+                        self.canva.call_rotate(jdata['args'][0], jdata['args'][1])
+                    elif jdata['rq'] == requests[RQ_SET_SIZE]:
+                        self.canva.call_set_size(jdata['args'][0], jdata['args'][1])
+                    elif jdata['rq'] == requests[RQ_SCROLL]:
+                        self.canva.call_scroll(jdata['args'])
+                    elif jdata['rq'] == requests[RQ_MOVE]:
+                        self.canva.call_move(jdata['args'][0], jdata['args'][1])
+                    elif jdata['rq'] == requests[RQ_PAN]:
+                        self.canva.call_pan(jdata['args'][0], jdata['args'][1])
+                    elif jdata['rq'] == requests[RQ_CHECK_REDRAW]:
+                        self.canva.call_check_redraw()
+                    elif jdata['rq'] == requests[RQ_STOP]:
+                        break
+                time.sleep(0.01)
             self.canva.img.unlink()
             self.canva.pipe.close()
             print("OCCT stopped")

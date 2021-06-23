@@ -1153,5 +1153,6 @@ if __name__=="__main__":
                                                                                               "angular-deflection": args.angular_deflection})
         ep.push_event(ee.main_start, args)
         ep.process()
+        win.mainloop()
 
     RunGLFWDisplay(occt_proc, sys.argv)
