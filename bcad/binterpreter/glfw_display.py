@@ -244,7 +244,7 @@ def RunGLFWDisplay(target_proc=None, cmdline_args=None):
 
     from bcad.binterpreter.main_window import MainWindow
     from bcad.binterpreter.offscreen_display import offscreenViewer3d
-    
+    from bcad.binterpreter.args import parse_args
 
     def occt_proc(pipe, img, cmdline):
         signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -289,8 +289,12 @@ def RunGLFWDisplay(target_proc=None, cmdline_args=None):
             self.p.join()
             exit(0)
 
-    app = App()
-    app.run(target_proc)
+    args = parse_args(cmdline_args)
+    if args.output != None and target_proc != None:
+        target_proc(None, None, cmdline_args)
+    else:
+        app = App()
+        app.run(target_proc)
 
 if __name__ == "__main__":
     RunGLFWDisplay()

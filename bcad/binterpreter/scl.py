@@ -7,7 +7,6 @@ import os
 import numpy as np
 import json
 import math
-import argparse
 import traceback
 
 from logging import debug, info, warning, error, critical
@@ -19,6 +18,7 @@ from bcad.binterpreter.singleton import Singleton
 from bcad.binterpreter.scl_writer import SCLSTLWriter, SCLSTEPWriter, SCLDXFWriter
 from bcad.binterpreter.scl_util import Noval, unstringify, sign
 from bcad.binterpreter.scl_context import V2, V3, SCLContext, SCLProfile2, SCLExtrude, SCLUnion, SCLIntersection, SCLDifference, SCLProjection, SCLPart3, SCLLoft, get_inc_name
+from bcad.binterpreter.args import parse_args
 
 debug_parser=False
 debug_expr_en = False
@@ -1129,30 +1129,19 @@ if __name__=="__main__":
     import signal
 
     from bcad.binterpreter.glfw_display import RunGLFWDisplay
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--file', help='file to read', required=True, type=str)
-    parser.add_argument('--output', help='file to write', required=False, type=str)
-    parser.add_argument('--linear-deflection', help='Linear deflection parameter of SCL writer', required=False, type=float, default=1.0)
-    parser.add_argument('--angular-deflection', help='Angular deflection parameter of SCL writer', required=False, type=float, default=1.0)
-    parser.add_argument('--verbose', help='Verbose level, when set to 0: print only critical errors, 4+: print all debug messages, 3: default', required=False, type=int, default=3)
-    args = parser.parse_args()
     
     def occt_proc(pipe, img, cmdline):
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--file', help='file to read', required=True, type=str)
-        parser.add_argument('--output', help='file to write', required=False, type=str)
-        parser.add_argument('--linear-deflection', help='Linear deflection parameter of SCL writer', required=False, type=float, default=1.0)
-        parser.add_argument('--angular-deflection', help='Angular deflection parameter of SCL writer', required=False, type=float, default=1.0)
-        parser.add_argument('--verbose', help='Verbose level, when set to 0: print only critical errors, 4+: print all debug messages, 3: default', required=False, type=int, default=3)
-        args = parser.parse_args(cmdline)
+        args = parse_args(cmdline)
         
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         Singleton.pipe = pipe
         Singleton.img = img
-        Singleton.scl = SCL(path=args.file, output_path=args.output, verbose=args.verbose, extra={"linear-deflection": args.linear_deflection,
-                                                                                              "angular-deflection": args.angular_deflection})
+        Singleton.scl = SCL(path=args.file, output_path=args.output,
+                            verbose=args.verbose, extra={"linear-deflection": args.linear_deflection,
+                                                         "angular-deflection": args.angular_deflection})
+
         ep.push_event(ee.main_start, args)
         ep.process()
-        win.mainloop()
-
-    RunGLFWDisplay(occt_proc, sys.argv)
+        if args.output == None:
+            win.mainloop()
+    RunGLFWDisplay(occt_proc, sys.argv[1:])
