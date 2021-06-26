@@ -1,0 +1,10 @@
+kind: pipeline
+type: kubernetes
+name: default
+
+steps:
+- name: build
+  image: ubuntu:xenial-20210611
+  commands:
+  - apt-get update && apt-get install -y build-essential
+  - make build-appimage
