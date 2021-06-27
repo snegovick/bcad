@@ -152,7 +152,7 @@ if [ ${MINICONDA} -eq 1 ]; then
     fi
 
     if [ ! -e ezdxf ]; then
-        git clone git@github.com:snegovick/ezdxf.git
+        git clone https://github.com/snegovick/ezdxf.git
         pushd ezdxf
         git checkout 1070c67779f75c707c8817b2cc2eca87154fdab5 -b build
         ${APPDIR_T}/usr/bin/python3.8 setup.py build -j$(nproc) install --prefix ${APPDIR_T}/usr
@@ -548,7 +548,9 @@ cp ../bcad-launcher ./usr/bin/
 
 popd
 
-ARCH=x86_64 /tmp/appimagetool-x86_64.AppImage ${APPDIR}
+#ARCH=x86_64 /tmp/appimagetool-x86_64.AppImage ${APPDIR}
+/tmp/appimagetool-x86_64.AppImage --appimage-extract
+./squashfs-root/AppRun ${APPDIR}
 echo "======================"
 echo "Cleaning up"
 echo "======================"
