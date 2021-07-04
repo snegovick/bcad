@@ -20,10 +20,10 @@ fi
 if [ -e bcad.AppDir ]; then
     rm -rf bcad.AppDir
 fi
-pushd drone/src
+
 ROOTDIR=$(pwd)
-popd
-APPDIR=${ROOTDIR}/bcad.AppDir
+
+APPDIR=${ROOTDIR}/drone/src/bcad.AppDir
 
 BASE_URL=http://archive.main.int
 
