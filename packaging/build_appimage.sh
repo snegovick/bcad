@@ -20,7 +20,9 @@ fi
 if [ -e bcad.AppDir ]; then
     rm -rf bcad.AppDir
 fi
+pushd drone/src
 ROOTDIR=$(pwd)
+popd
 APPDIR=${ROOTDIR}/bcad.AppDir
 
 BASE_URL=http://archive.main.int
@@ -56,11 +58,9 @@ echo "======================"
 echo "Copy desktop files"
 echo "======================"
 
-cp ../bcad.desktop ./
-cp ../bcad.png ./
-cp ../bcad-launcher ./usr/bin/
-
-popd
+cp ${ROOTDIR}/bcad.desktop ./
+cp ${ROOTDIR}/bcad.png ./
+cp ${ROOTDIR}/bcad-launcher ./usr/bin/
 
 /tmp/appimagetool-x86_64.AppImage --appimage-extract
 ./squashfs-root/AppRun ${APPDIR}
