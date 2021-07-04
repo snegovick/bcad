@@ -13,6 +13,8 @@ steps:
   commands:
   - apt-get update
   - DEBIAN_FRONTEND=noninteractive apt-get install -yq build-essential file git wget curl
+  - git fetch --tags
+  - mkdir ~/.ssh
   - echo "$${SCP_ID}" | cat > ~/.ssh/id_rsa
   - echo "$${SCP_PUB}" | cat > ~/.ssh/id_rsa.pub
   - make build-appimage
