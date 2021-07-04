@@ -58,6 +58,7 @@ echo "======================"
 echo "Copy desktop files"
 echo "======================"
 
+cp ./AppRun ${APPDIR}
 cp ${ROOTDIR}/bcad.desktop ${APPDIR}
 cp ${ROOTDIR}/bcad.png ${APPDIR}
 cp ${ROOTDIR}/bcad-launcher ${APPDIR}/usr/bin/
