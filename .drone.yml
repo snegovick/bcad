@@ -7,5 +7,5 @@ steps:
   image: ubuntu:focal-20210609
   commands:
   - apt-get update
-  - DEBIAN_FRONTEND=noninteractive apt-get install -yq build-essential git wget curl cmake libfreetype-dev libtbb-dev libfreeimage-dev libvtk6-dev flex bison rapidjson-dev tcl-dev tk-dev doxygen graphviz libxmu-dev libxi-dev swig
+  - DEBIAN_FRONTEND=noninteractive apt-get install -yq build-essential git wget curl
   - make build-appimage
