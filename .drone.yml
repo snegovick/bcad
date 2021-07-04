@@ -18,7 +18,7 @@ steps:
   - echo "$${SCP_ID}" | cat > ~/.ssh/id_rsa
   - echo "$${SCP_PUB}" | cat > ~/.ssh/id_rsa.pub
   - make build-appimage
-  - CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  - CURRENT_BRANCH=${DRONE_SOURCE_BRANCH}
   - BRANCH=""; if [ "$${CURRENT_BRANCH}" != "master" ]; then BRANCH="$${CURRENT_BRANCH}_"; fi
   - VERSION=$(git describe --tags)
   - echo "Uploading version $${BRANCH}bcad-x86_64-$${VERSION} from $${CURRENT_BRANCH}"
