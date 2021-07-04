@@ -58,9 +58,9 @@ echo "======================"
 echo "Copy desktop files"
 echo "======================"
 
-cp ${ROOTDIR}/bcad.desktop ./
-cp ${ROOTDIR}/bcad.png ./
-cp ${ROOTDIR}/bcad-launcher ./usr/bin/
+cp ${ROOTDIR}/bcad.desktop ${APPDIR}
+cp ${ROOTDIR}/bcad.png ${APPDIR}
+cp ${ROOTDIR}/bcad-launcher ${APPDIR}/usr/bin/
 
 /tmp/appimagetool-x86_64.AppImage --appimage-extract
 ./squashfs-root/AppRun ${APPDIR}
