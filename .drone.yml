@@ -7,5 +7,5 @@ steps:
   image: ubuntu:focal-20210609
   commands:
   - apt-get update
-  - DEBIAN_FRONTEND=noninteractive apt-get install -yq build-essential git wget curl
+  - DEBIAN_FRONTEND=noninteractive apt-get install -yq build-essential file git wget curl
   - make build-appimage
