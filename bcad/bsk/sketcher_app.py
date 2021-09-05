@@ -23,21 +23,18 @@ class Handler:
 
 class SketcherApp:
     def __init__(self, argv):
-        args = {"--verbose": {"is_set": util.NOT_SET, "has_option": util.HAS_OPTION, "option": None},
-                "--plugins-dir": {"is_set": util.NOT_SET, "has_option": util.HAS_OPTION, "option": None}}
-        util.parse_args(args, argv)
-        if args["--verbose"]["has_option"]:
-            verbose_level = int(args["--verbose"]["option"])
-            if verbose_level == 1:
-                logging.getLogger("").setLevel(logging.CRITICAL)
-            elif verbose_level == 2:
-                logging.getLogger("").setLevel(logging.ERROR)
-            elif verbose_level == 3:
-                logging.getLogger("").setLevel(logging.WARNING)
-            elif verbose_level == 4:
-                logging.getLogger("").setLevel(logging.INFO)
-            elif verbose_level >= 5:
-                logging.getLogger("").setLevel(logging.DEBUG)
+        args = util.parse_args(argv[1:])
+        verbose_level = int(args.verbose)
+        if verbose_level == 1:
+            logging.getLogger("").setLevel(logging.CRITICAL)
+        elif verbose_level == 2:
+            logging.getLogger("").setLevel(logging.ERROR)
+        elif verbose_level == 3:
+            logging.getLogger("").setLevel(logging.WARNING)
+        elif verbose_level == 4:
+            logging.getLogger("").setLevel(logging.INFO)
+        elif verbose_level >= 5:
+            logging.getLogger("").setLevel(logging.DEBUG)
 
         self.window = Gtk.Window()
         self.window.maximize()

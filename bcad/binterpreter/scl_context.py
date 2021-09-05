@@ -1,3 +1,5 @@
+import os
+
 from OCC.Core.AIS import AIS_ColoredShape, AIS_Line
 from OCC.Core.Geom import Geom_Line, Geom_Point
 from OCC.Core.Prs3d import Prs3d_LineAspect, Prs3d_Drawer, Prs3d_Projector
@@ -18,6 +20,16 @@ from OCC.Display.OCCViewer import rgb_color
 from OCC.Extend.TopologyUtils import TopologyExplorer
 from OCC.Extend.ShapeFactory import make_wire
 from OCC.Extend.DataExchange import read_step_file_with_names_colors, read_stl_file
+
+from OCC.Core.IFSelect import IFSelect_RetDone, IFSelect_ItemsByEntity
+from OCC.Core.TDocStd import TDocStd_Document
+from OCC.Core.XCAFDoc import (XCAFDoc_DocumentTool_ShapeTool,
+                              XCAFDoc_DocumentTool_ColorTool)
+from OCC.Core.STEPCAFControl import STEPCAFControl_Reader
+from OCC.Core.TDF import TDF_LabelSequence, TDF_Label
+from OCC.Core.TCollection import TCollection_ExtendedString
+from OCC.Core.Quantity import Quantity_Color, Quantity_TOC_RGB
+from OCC.Core.TopLoc import TopLoc_Location
 
 from bcad.binterpreter.bgui import init_display
 from bcad.binterpreter.colorname_map import colorname_map
@@ -526,22 +538,233 @@ class SCLPart3(SCLContext):
         debug("Creating cylinder %s"%(name,))
         self.add_child_context(sclp)
 
+    def read_step(self, filename):
+        """ Returns list of tuples (topods_shape, label, color)
+        Use OCAF.
+        """
+        if not os.path.isfile(filename):
+            raise FileNotFoundError("%s not found." % filename)
+        debug("Loading %s"%(filename,))
+        # the list:
+        output_shapes = {}
+
+        # create an handle to a document
+        doc = TDocStd_Document(TCollection_ExtendedString("pythonocc-doc"))
+
+        # Get root assembly
+        shape_tool = XCAFDoc_DocumentTool_ShapeTool(doc.Main())
+        color_tool = XCAFDoc_DocumentTool_ColorTool(doc.Main())
+        #layer_tool = XCAFDoc_DocumentTool_LayerTool(doc.Main())
+        #mat_tool = XCAFDoc_DocumentTool_MaterialTool(doc.Main())
+
+        step_reader = STEPCAFControl_Reader()
+        step_reader.SetColorMode(True)
+        step_reader.SetLayerMode(True)
+        step_reader.SetNameMode(True)
+        step_reader.SetMatMode(True)
+        step_reader.SetGDTMode(True)
+
+        debug("Read step file")
+        status = step_reader.ReadFile(filename)
+        if status == IFSelect_RetDone:
+            step_reader.Transfer(doc)
+        debug("Done reading")
+
+        locs = []
+
+        def _get_sub_shapes(lab, loc):
+            #global cnt, lvl
+            #cnt += 1
+            #print("\n[%d] level %d, handling LABEL %s\n" % (cnt, lvl, _get_label_name(lab)))
+            #print()
+            #print(lab.DumpToString())
+            #print()
+            #print("Is Assembly    :", shape_tool.IsAssembly(lab))
+            #print("Is Free        :", shape_tool.IsFree(lab))
+            #print("Is Shape       :", shape_tool.IsShape(lab))
+            #print("Is Compound    :", shape_tool.IsCompound(lab))
+            #print("Is Component   :", shape_tool.IsComponent(lab))
+            #print("Is SimpleShape :", shape_tool.IsSimpleShape(lab))
+            #print("Is Reference   :", shape_tool.IsReference(lab))
+
+            #users = TDF_LabelSequence()
+            #users_cnt = shape_tool.GetUsers(lab, users)
+            #print("Nr Users       :", users_cnt)
+
+            l_subss = TDF_LabelSequence()
+            shape_tool.GetSubShapes(lab, l_subss)
+            #print("Nb subshapes   :", l_subss.Length())
+            l_comps = TDF_LabelSequence()
+            shape_tool.GetComponents(lab, l_comps)
+            #print("Nb components  :", l_comps.Length())
+            #print()
+            name = lab.GetLabelName()
+            debug("Name : %s"%(name,))
+
+            if shape_tool.IsAssembly(lab):
+                l_c = TDF_LabelSequence()
+                shape_tool.GetComponents(lab, l_c)
+                for i in range(l_c.Length()):
+                    label = l_c.Value(i+1)
+                    if shape_tool.IsReference(label):
+                        #print("\n########  reference label :", label)
+                        label_reference = TDF_Label()
+                        shape_tool.GetReferredShape(label, label_reference)
+                        loc = shape_tool.GetLocation(label)
+                        #print("    loc          :", loc)
+                        #trans = loc.Transformation()
+                        #print("    tran form    :", trans.Form())
+                        #rot = trans.GetRotation()
+                        #print("    rotation     :", rot)
+                        #print("    X            :", rot.X())
+                        #print("    Y            :", rot.Y())
+                        #print("    Z            :", rot.Z())
+                        #print("    W            :", rot.W())
+                        #tran = trans.TranslationPart()
+                        #print("    translation  :", tran)
+                        #print("    X            :", tran.X())
+                        #print("    Y            :", tran.Y())
+                        #print("    Z            :", tran.Z())
+
+                        locs.append(loc)
+                        #print(">>>>")
+                        #lvl += 1
+                        _get_sub_shapes(label_reference, loc)
+                        #lvl -= 1
+                        #print("<<<<")
+                        locs.pop()
+
+            elif shape_tool.IsSimpleShape(lab):
+                #print("\n########  simpleshape label :", lab)
+                shape = shape_tool.GetShape(lab)
+                #print("    all ass locs   :", locs)
+
+                loc = TopLoc_Location()
+                for l in locs:
+                    #print("    take loc       :", l)
+                    loc = loc.Multiplied(l)
+
+                #trans = loc.Transformation()
+                #print("    FINAL loc    :")
+                #print("    tran form    :", trans.Form())
+                #rot = trans.GetRotation()
+                #print("    rotation     :", rot)
+                #print("    X            :", rot.X())
+                #print("    Y            :", rot.Y())
+                #print("    Z            :", rot.Z())
+                #print("    W            :", rot.W())
+                #tran = trans.TranslationPart()
+                #print("    translation  :", tran)
+                #print("    X            :", tran.X())
+                #print("    Y            :", tran.Y())
+                #print("    Z            :", tran.Z())
+                c = Quantity_Color(0.5, 0.5, 0.5, Quantity_TOC_RGB)  # default color
+                colorSet = False
+                if (color_tool.GetInstanceColor(shape, 0, c) or
+                        color_tool.GetInstanceColor(shape, 1, c) or
+                        color_tool.GetInstanceColor(shape, 2, c)):
+                    color_tool.SetInstanceColor(shape, 0, c)
+                    color_tool.SetInstanceColor(shape, 1, c)
+                    color_tool.SetInstanceColor(shape, 2, c)
+                    colorSet = True
+                    n = c.Name(c.Red(), c.Green(), c.Blue())
+                    debug('    instance color Name & RGB: %s %s %s %s %s'%(str(c), str(n), str(c.Red()), str(c.Green()), str(c.Blue())))
+
+                if not colorSet:
+                    if (color_tool.GetColor(lab, 0, c) or
+                            color_tool.GetColor(lab, 1, c) or
+                            color_tool.GetColor(lab, 2, c)):
+
+                        color_tool.SetInstanceColor(shape, 0, c)
+                        color_tool.SetInstanceColor(shape, 1, c)
+                        color_tool.SetInstanceColor(shape, 2, c)
+
+                        n = c.Name(c.Red(), c.Green(), c.Blue())
+                        debug('    shape color Name & RGB: %s %s %s %s %s'%(str(c), str(n), str(c.Red()), str(c.Green()), str(c.Blue())))
+
+                shape_disp = BRepBuilderAPI_Transform(shape, loc.Transformation()).Shape()
+                if not shape_disp in output_shapes:
+                    output_shapes[shape_disp] = [name, lab.GetLabelName(), c]
+                for i in range(l_subss.Length()):
+                    lab_subs = l_subss.Value(i+1)
+                    #print("\n########  simpleshape subshape label :", lab)
+                    shape_sub = shape_tool.GetShape(lab_subs)
+
+                    c = Quantity_Color(0.5, 0.5, 0.5, Quantity_TOC_RGB)  # default color
+                    colorSet = False
+                    if (color_tool.GetInstanceColor(shape_sub, 0, c) or
+                            color_tool.GetInstanceColor(shape_sub, 1, c) or
+                            color_tool.GetInstanceColor(shape_sub, 2, c)):
+                        color_tool.SetInstanceColor(shape_sub, 0, c)
+                        color_tool.SetInstanceColor(shape_sub, 1, c)
+                        color_tool.SetInstanceColor(shape_sub, 2, c)
+                        colorSet = True
+                        n = c.Name(c.Red(), c.Green(), c.Blue())
+                        debug('    instance color Name & RGB: %s %s %s %s %s'%(str(c), str(n), str(c.Red()), str(c.Green()), str(c.Blue())))
+
+                    if not colorSet:
+                        if (color_tool.GetColor(lab_subs, 0, c) or
+                                color_tool.GetColor(lab_subs, 1, c) or
+                                color_tool.GetColor(lab_subs, 2, c)):
+                            color_tool.SetInstanceColor(shape, 0, c)
+                            color_tool.SetInstanceColor(shape, 1, c)
+                            color_tool.SetInstanceColor(shape, 2, c)
+
+                            n = c.Name(c.Red(), c.Green(), c.Blue())
+                            debug('    shape color Name & RGB: %s %s %s %s %s'%(str(c), str(n), str(c.Red()), str(c.Green()), str(c.Blue())))
+                    shape_to_disp = BRepBuilderAPI_Transform(shape_sub, loc.Transformation()).Shape()
+                    # position the subshape to display
+                    if not shape_to_disp in output_shapes:
+                        output_shapes[shape_to_disp] = [name, lab_subs.GetLabelName(), c]
+
+
+        def _get_shapes():
+            debug("Get shapes")
+            labels = TDF_LabelSequence()
+            shape_tool.GetFreeShapes(labels)
+            #global cnt
+            #cnt += 1
+
+            debug("Number of shapes at root : %s"%(str(labels.Length(),)))
+            for i in range(labels.Length()):
+                root_item = labels.Value(i+1)
+                debug("Get sub shapes")
+                _get_sub_shapes(root_item, None)
+            debug("Get shapes done")
+        _get_shapes()
+        return output_shapes
+
+
     def import_step(self, filename):
-        shapes_labels_colors = read_step_file_with_names_colors(filename)
+        shapes_labels_colors = self.read_step(filename)
+        prev_name = None
+        part = None
         for shpt_lbl_color in shapes_labels_colors:
-            label, c = shapes_labels_colors[shpt_lbl_color]
-            debug("shpt_lbl_color: %s"%(str(shpt_lbl_color),))
-            if (type(shpt_lbl_color) != TopoDS_Solid):
-                debug("skip")
-                continue
-            scls = SCLShape(shpt_lbl_color)
-            scls.color([c.Red(), c.Green(), c.Blue()])
-            sclp = SCLPart3(self)
-            sclp.set_shape(scls)
-            name = get_inc_name("step")
-            sclp.set_name(name)
+            name, label, c = shapes_labels_colors[shpt_lbl_color]
+            debug("name: %s, label: %s, shpt_lbl_color: %s"%(str(name), str(label), str(shpt_lbl_color),))
+            # if (type(shpt_lbl_color) != TopoDS_Solid):
+            #     debug("skip")
+            #     continue
+            current_part = None
+            if prev_name != name:
+                prev_name = name
+                scls = SCLShape(shpt_lbl_color)
+                scls.color([c.Red(), c.Green(), c.Blue()])
+                part = SCLPart3(self)
+                part.set_shape(scls)
+                name = get_inc_name(name)
+                part.set_name(name)
+                current_part = part
+            else:
+                scls = SCLShape(shpt_lbl_color)
+                scls.color([c.Red(), c.Green(), c.Blue()])
+                sclp = SCLPart3(part)
+                sclp.set_shape(scls)
+                name = get_inc_name(name)
+                sclp.set_name(name)
+                current_part = sclp
             debug("Creating step %s"%(name,))
-            self.add_child_context(sclp)
+            self.add_child_context(current_part)
 
     def import_stl(self, filename):
         stl_shp = read_stl_file(filename)
@@ -554,7 +777,7 @@ class SCLPart3(SCLContext):
         self.add_child_context(sclp)
 
     def display(self, writer=None):
-        debug("Display SCLPart3")
+        debug("Display SCLPart3 %s"%(self.name,))
         #if self.display_mode == DISP_MODE_HLR:
             #Singleton.sd.display.SetModeHLR()
         #else:

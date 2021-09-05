@@ -72,45 +72,55 @@ class SCLShape(object):
     def transform_shape(self):
         self.shape = BRepBuilderAPI_Transform(self.shape, self.trsf, True).Shape()
 
+    def display_hidden(self):
+        ais_shp = AIS_Shape(self.shape)
+        ais_shp.SetWidth(0.1)
+        ais_shp.SetTransparency(0.10)
+        ais_shp.SetColor(rgb_color(0,0,0))
+        aspect = ais_shp.Attributes().WireAspect()
+        aspect.SetColor(rgb_color(0,0,0))
+        aspect.SetTypeOfLine(1)
+        ais_context.Display(ais_shp, True)
+
+    def display_main_projection(self):
+        ais_shp = AIS_Shape(self.shape)
+        ais_shp.SetWidth(5)
+        #ais_shp.SetTransparency(0)
+        #ais_shp.SetColor(rgb_color(0,0,0))
+        aspect = ais_shp.Attributes().WireAspect()
+        aspect.SetColor(rgb_color(0,0,0))
+        aspect.SetTypeOfLine(0)
+        ais_context.Display(ais_shp, True)
+
+    def display_main(self):
+        ais_context = Singleton.sd.display.GetContext()
+        ais_shp = AIS_Shape(self.shape)
+        ais_shp.SetWidth(2.0)
+        ais_shp.SetTypeOfHLR(2)
+        if (is_var_set(self.shape_color)):
+            ais_shp.SetColor(self.shape_color)
+        else:
+            ais_shp.SetColor(Quantity_Color(Quantity_NOC_PERU))
+        if (self.display_mode == DISP_MODE_WIREFRAME):
+            ais_context.SetDisplayMode(ais_shp, AIS_WireFrame, True)
+        else:
+            ais_context.SetDisplayMode(ais_shp, AIS_Shaded, True)
+        ais_context.Display(ais_shp, False)
+
     def display(self, writer=None):
-        debug("shape Display")
+        #debug("shape Display")
         if self.shape != None:
             if (writer != None):
                 writer.Transfer(self.shape)
             else:
-                debug("Line style is %s"%(self.style,))
+                #debug("Line style is %s"%(self.style,))
                 ais_context = Singleton.sd.display.GetContext()                    
                 if (self.style == 'hidden'):
-                    ais_shp = AIS_Shape(self.shape)
-                    ais_shp.SetWidth(0.1)
-                    ais_shp.SetTransparency(0.10)
-                    ais_shp.SetColor(rgb_color(0,0,0))
-                    aspect = ais_shp.Attributes().WireAspect()
-                    aspect.SetColor(rgb_color(0,0,0))
-                    aspect.SetTypeOfLine(1)
-                    ais_context.Display(ais_shp, True)
+                    self.display_hidden()
                 elif (self.style == 'main_projection'):
-                    ais_shp = AIS_Shape(self.shape)
-                    ais_shp.SetWidth(5)
-                    #ais_shp.SetTransparency(0)
-                    #ais_shp.SetColor(rgb_color(0,0,0))
-                    aspect = ais_shp.Attributes().WireAspect()
-                    aspect.SetColor(rgb_color(0,0,0))
-                    aspect.SetTypeOfLine(0)
-                    ais_context.Display(ais_shp, True)
+                    self.display_main_projection()
                 else:
-                    ais_context = Singleton.sd.display.GetContext()
-                    ais_shp = AIS_Shape(self.shape)
-                    ais_shp.SetWidth(2.0)
-                    ais_shp.SetTypeOfHLR(2)
-                    if (is_var_set(self.shape_color)):
-                        ais_shp.SetColor(self.shape_color)
-                    else:
-                        ais_shp.SetColor(Quantity_Color(Quantity_NOC_PERU))
-                    if (self.display_mode == DISP_MODE_WIREFRAME):
-                        ais_context.SetDisplayMode(ais_shp, AIS_WireFrame, True)
-                    else:
-                        ais_context.SetDisplayMode(ais_shp, AIS_Shaded, True)
-                    ais_context.Display(ais_shp, True)
+                    self.display_main()
         else:
-            warning("Empty shape")
+            #warning("Empty shape")
+            pass

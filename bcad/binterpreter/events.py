@@ -1,6 +1,8 @@
 from logging import debug, info, warning, error, critical
 import logging
 
+logging.getLogger(__name__)
+
 import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -98,7 +100,7 @@ class EventProcessor(object):
     def main_start(self, args):
         if self.started == False:
             self.started = True
-            info("Starting")
+            info("Main start")
             info(args)
             args = args[0]
             Singleton.observers = {}

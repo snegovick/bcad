@@ -23,9 +23,11 @@ from bcad.binterpreter.args import parse_args
 debug_parser=False
 debug_expr_en = False
 
+TAG="scl "
+
 def debug_expr(msg):
     if (debug_expr_en):
-        debug(msg)
+        debug(TAG+msg)
 
 class UnknownVariableError(Exception):
     def __init__(self, varname, line):
@@ -184,18 +186,36 @@ class SCLFrame:
         raise UnknownModuleError(mname, line)
 
     def has_module(self, mname, line):
-        debug('SCLFrame:%i:Check module %s existance'%(line, mname))
+        debug(TAG+'SCLFrame:%i:Check module %s existance'%(line, mname))
         if mname in self.modules:
             return True
         return False
 
     def set_module(self, mname, value, line):
-        debug('SCLFrame:%i:Setting module %s'%(line, mname))
+        debug(TAG+'SCLFrame:%i:Setting module %s'%(line, mname))
         self.modules[mname] = value
 
 class SCL:
     def __init__(self, data=None, path=None, output_path=None, verbose=3, extra={}):
-        debug('SCL data: %s, path: %s'%(data, path))
+        self.verbose = verbose
+        if verbose == 0:
+            logging.getLogger(None).setLevel(logging.CRITICAL)
+        elif verbose == 1:
+            logging.getLogger(None).setLevel(logging.ERROR)
+        elif verbose == 2:
+            logging.getLogger(None).setLevel(logging.WARNING)
+        elif verbose == 3:
+            logging.getLogger(None).setLevel(logging.INFO)
+        elif verbose >= 4:
+            logging.getLogger(None).setLevel(logging.DEBUG)
+        # create formatter and add it to the handlers
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        ch.setFormatter(formatter)
+        logging.getLogger(None).handlers = []
+        logging.getLogger(None).addHandler(ch)
+        debug(TAG+'SCL data: %s, path: %s'%(data, path))
         self.extra = extra
         self.output_path = output_path
         self.data = data
@@ -203,17 +223,6 @@ class SCL:
             ep.push_event(ee.init_display, None)
             ep.process()
         self.stack = [SCLFrame()]
-        self.verbose = verbose
-        if verbose == 0:
-            logging.getLogger("").setLevel(logging.CRITICAL)
-        elif verbose == 1:
-            logging.getLogger("").setLevel(logging.ERROR)
-        elif verbose == 2:
-            logging.getLogger("").setLevel(logging.WARNING)
-        elif verbose == 3:
-            logging.getLogger("").setLevel(logging.INFO)
-        elif verbose >= 4:
-            logging.getLogger("").setLevel(logging.DEBUG)
 
         self.debug=False
 
@@ -265,11 +274,11 @@ class SCL:
                 if (self.verbose>=4):
                     traceback.print_exc()
             else:
-                debug(json.dumps(slp.data, indent=2))
+                debug(TAG+json.dumps(slp.data, indent=2))
                 for s in slp.data:
                     self.parse_statement(s)
 
-        debug("Display context")
+        debug(TAG+"Display context")
         self.context.display(writer)
         
         if self.output_path != None:
@@ -286,7 +295,7 @@ class SCL:
 
     def find_variable_value(self, varname, line, print_function=debug):
         val = None
-        print_function('SCL:%i:Looking for variable %s'%(line, varname,))
+        print_function(TAG+'SCL:%i:Looking for variable %s'%(line, varname,))
 
         for f in reversed(self.stack):
             try:
@@ -299,13 +308,13 @@ class SCL:
         raise UnknownVariableError(varname, line)
 
     def set_variable(self, varname, value, line):
-        debug('SCL:%i:Setting variable %s: %s'%(line, varname, value))
+        debug(TAG+'SCL:%i:Setting variable %s: %s'%(line, varname, value))
         top = self.stack[-1]
         top.set_variable(varname, value, line)
 
     def find_function(self, fname, line):
         val = None
-        debug('SCL:%i:Looking for function %s'%(line, fname,))
+        debug(TAG+'SCL:%i:Looking for function %s'%(line, fname,))
 
         for f in reversed(self.stack):
             try:
@@ -313,18 +322,18 @@ class SCL:
             except:
                 pass
             else:
-                debug("Found function %s"%(fname,))
+                debug(TAG+"Found function %s"%(fname,))
                 return val
         raise UnknownFunctionError(fname, line)
 
     def set_function(self, fname, value, line):
-        debug('SCL:%i:Setting function %s'%(line, fname))
+        debug(TAG+'SCL:%i:Setting function %s'%(line, fname))
         top = self.stack[-1]
         top.set_function(fname, value, line)
 
     def find_module(self, mname, line):
         val = None
-        debug('SCL:%i:Looking for module %s'%(line, mname,))
+        debug(TAG+'SCL:%i:Looking for module %s'%(line, mname,))
 
         for f in reversed(self.stack):
             try:
@@ -332,12 +341,12 @@ class SCL:
             except:
                 pass
             else:
-                debug("Found module %s"%(mname,))
+                debug(TAG+"Found module %s"%(mname,))
                 return val
         raise UnknownModuleError(mname, line)
 
     def set_module(self, mname, value, line):
-        debug('SCL:%i:Setting module %s'%(line, mname))
+        debug(TAG+'SCL:%i:Setting module %s'%(line, mname))
         top = self.stack[-1]
         top.set_module(mname, value, line)
 
@@ -392,7 +401,7 @@ class SCL:
             elif op == '%':
                 return e1num%e2num
             elif op == '==':
-                debug("Compare %s == %s -> %s"%((e1num), str(e2num), str(e1num==e2num)))
+                debug(TAG+"Compare %s == %s -> %s"%((e1num), str(e2num), str(e1num==e2num)))
                 return e1num==e2num
             elif op == '!=':
                 return e1num!=e2num
@@ -452,7 +461,7 @@ class SCL:
             else:
                 arr = []
                 
-            debug("arr: %s"%(str(arr),))
+            debug(TAG+"arr: %s"%(str(arr),))
             return arr
         elif e['type']=='expr_call':
             self.push_stack()
@@ -524,7 +533,7 @@ class SCL:
 
     def check_kwargs(self, args):
         prev_arg = None
-        debug('args: %s'%(str(args),))
+        debug(TAG+'args: %s'%(str(args),))
         for a in args:
             if prev_arg!=None:
                 if (prev_arg['type'] == 'expr_assign') and (a['type'] != 'expr_assign'):
@@ -533,9 +542,9 @@ class SCL:
     
     def check_kwargs_definition(self, args_definition):
         prev_arg = None
-        debug("args definition: %s"%(str(args_definition), ))
+        debug(TAG+"args definition: %s"%(str(args_definition), ))
         for a in args_definition:
-            debug("Checking argument %s"%(a,))
+            debug(TAG+"Checking argument %s"%(a,))
             if prev_arg!=None:
                 if (prev_arg['type'] == 'expr_assign') and (a['type'] == 'expr_name'):
                     raise SyntaxError("positional argument after keyword argument", a['line'])
@@ -548,7 +557,7 @@ class SCL:
         def_vals = {}
         arg_list = []
         positional = 0
-        debug('args_deginition: %s'%(str(args_definition),))
+        debug(TAG+'args_deginition: %s'%(str(args_definition),))
         for a in args_definition:
             defval = None
             argid = None
@@ -592,16 +601,16 @@ class SCL:
             self.parse_statement(statement)
 
     def parse_statement(self, s, use=False):
-        debug("Parse statement %s"%(s,))
+        debug(TAG+"Parse statement %s"%(s,))
         if 'type' not in s:
             raise UnhandledCaseError('Statement type unknown: %s'%(s,))
         t = s['type']
-        debug("%i:%s"%(s['line'],s['type']))
+        debug(TAG+"%i:%s"%(s['line'],s['type']))
         if t=='stat_assign':
             self.parse_expr(s['val'])
         elif t=='stat_builtin':
             if use:
-                debug("Skip builtin because \"use\" is set")
+                debug(TAG+"Skip builtin because \"use\" is set")
             else:
                 if s['id'] == 'linear_extrude':
                     self.push_stack()
@@ -617,11 +626,11 @@ class SCL:
                         if (top.has_variable('height', s['line'])):
                             l = self.find_variable_value('height', s['line'])
                             
-                        debug("Call builtin extrude(%f)"%(l,))
+                        debug(TAG+"Call builtin extrude(%f)"%(l,))
                         self.active_context.linear_extrude(l)
                         self.pop_stack()
                         self.pop_context()
-                    debug("Leave linear extrude")
+                    debug(TAG+"Leave linear extrude")
                     self.pop_stack()
                 elif s['id'] == 'loft':
                     self.push_stack()
@@ -642,30 +651,30 @@ class SCL:
                             ruled = self.find_variable_value('ruled', s['line'])
                         if (top.has_variable('precision', s['line'])):
                             precision = self.find_variable_value('precision', s['line'])
-                        debug("Call builtin loft(%s, %s, %f)"%(str(solid), str(ruled), precision))
+                        debug(TAG+"Call builtin loft(%s, %s, %f)"%(str(solid), str(ruled), precision))
                         self.active_context.loft(solid, ruled, precision)
                         self.pop_stack()
                         self.pop_context()
-                    debug("Leave loft")
+                    debug(TAG+"Leave loft")
                     self.pop_stack()
                 elif s['id']=='profile':
-                    debug("Profile")
+                    debug(TAG+"Profile")
                     self.push_stack()
 
-                    debug("Call builtin profile()")
+                    debug(TAG+"Call builtin profile()")
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
                         self.push_context(SCLProfile2, get_inc_name("profile2"))
                         self.parse_block(s['block'])
                         self.pop_context()
-                    debug("Leave profile")
+                    debug(TAG+"Leave profile")
                     self.pop_stack()
                 elif s['id'] == 'union':
                     self.push_stack()
                     top = self.stack[-1]
 
-                    debug("Call union()")
+                    debug(TAG+"Call union()")
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
@@ -673,13 +682,13 @@ class SCL:
                         self.parse_block(s['block'])
                         self.active_context.union()
                         self.pop_context()
-                    debug("Leave union")
+                    debug(TAG+"Leave union")
                     self.pop_stack()
                 elif s['id'] == 'intersection':
                     self.push_stack()
                     top = self.stack[-1]
 
-                    debug("Call intersection()")
+                    debug(TAG+"Call intersection()")
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
@@ -687,12 +696,12 @@ class SCL:
                         self.parse_block(s['block'])
                         self.active_context.intersection()
                         self.pop_context()
-                    debug("Leave intersection")
+                    debug(TAG+"Leave intersection")
                     self.pop_stack()
                 elif s['id'] == 'difference':
                     self.push_stack()
                     top = self.stack[-1]
-                    debug("Call difference()")
+                    debug(TAG+"Call difference()")
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
@@ -700,12 +709,12 @@ class SCL:
                         self.parse_block(s['block'])
                         self.active_context.difference()
                         self.pop_context()
-                    debug("Leave difference")
+                    debug(TAG+"Leave difference")
                     self.pop_stack()
                 elif s['id'] == 'projection':
                     self.push_stack()
                     top = self.stack[-1]
-                    debug("Call projection()")
+                    debug(TAG+"Call projection()")
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
@@ -713,11 +722,11 @@ class SCL:
                         self.parse_block(s['block'])
                         self.active_context.projection()
                         self.pop_context()
-                    debug("Leave projection")
+                    debug(TAG+"Leave projection")
                     self.pop_stack()
 
                 elif s['id']=='rotate':
-                    debug("Rotate")
+                    debug(TAG+"Rotate")
                     self.push_stack()
                     self.parse_kwargs(s['id'], s['line'], rotate_module_definition['args'], s['args'])
                     top = self.stack[-1]
@@ -732,27 +741,27 @@ class SCL:
                         self.parse_block(s['block'])
                     else:
                         self.parse_block(s['block'])
-                        debug("Call builtin rotate(%f,%f,%f)"%(v[0],v[1],v[2]))
+                        debug(TAG+"Call builtin rotate(%f,%f,%f)"%(v[0],v[1],v[2]))
                         self.active_context.rotate(v[0],v[1],v[2])
-                    debug("Leave rotate [%s]"%(self.active_context.name))
+                    debug(TAG+"Leave rotate [%s]"%(self.active_context.name))
                     self.pop_context()
                     self.pop_stack()
 
                 elif s['id']=='display_wireframe':
-                    debug("Display wireframe")
+                    debug(TAG+"Display wireframe")
                     self.push_stack()
                     self.push_context(SCLPart3, get_inc_name("display_wireframe"))
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
                         self.parse_block(s['block'])
-                        debug("Call builtin display_wireframe()")
+                        debug(TAG+"Call builtin display_wireframe()")
                         self.active_context.display_wireframe()
-                    debug("Leave display_wireframe [%s]"%(self.active_context.name))
+                    debug(TAG+"Leave display_wireframe [%s]"%(self.active_context.name))
                     self.pop_context()
                     self.pop_stack()
                 elif s['id']=='translate':
-                    debug("translate")
+                    debug(TAG+"translate")
                     self.push_stack()
                     self.parse_kwargs(s['id'], s['line'], translate_module_definition['args'], s['args'])
                     top = self.stack[-1]
@@ -767,13 +776,13 @@ class SCL:
                         self.parse_block(s['block'])
                     else:
                         self.parse_block(s['block'])
-                        debug("Call builtin translate(%f,%f,%f) line: %i [%s]"%(v[0],v[1],v[2], s['line'], self.active_context.name))
+                        debug(TAG+"Call builtin translate(%f,%f,%f) line: %i [%s]"%(v[0],v[1],v[2], s['line'], self.active_context.name))
                         self.active_context.translate(v[0],v[1],v[2])
-                    debug("Leave translate [%s]"%(self.active_context.name))
+                    debug(TAG+"Leave translate [%s]"%(self.active_context.name))
                     self.pop_context()
                     self.pop_stack()
                 elif s['id']=='color':
-                    debug("color")
+                    debug(TAG+"color")
                     self.push_stack()
                     self.parse_kwargs(s['id'], s['line'], color_module_definition['args'], s['args'])
                     top = self.stack[-1]
@@ -791,13 +800,13 @@ class SCL:
                         self.parse_block(s['block'])
                     else:
                         self.parse_block(s['block'])
-                        debug("Call builtin color(%s) line: %i [%s]"%(str(v), s['line'], self.active_context.name))
+                        debug(TAG+"Call builtin color(%s) line: %i [%s]"%(str(v), s['line'], self.active_context.name))
                         self.active_context.color(v)
-                    debug("Leave color [%s]"%(self.active_context.name))
+                    debug(TAG+"Leave color [%s]"%(self.active_context.name))
                     self.pop_context()
                     self.pop_stack()
                 elif s['id']=='mirror':
-                    debug("Mirror")
+                    debug(TAG+"Mirror")
                     self.push_stack()
                     self.parse_kwargs(s['id'], s['line'], mirror_module_definition['args'], s['args'])
                     top = self.stack[-1]
@@ -811,17 +820,17 @@ class SCL:
                     if debug_parser:
                         self.parse_block(s['block'])
                     else:
-                        debug("Call builtin mirror(%f, %f, %f)"%(v[0],v[1], v[2]))
+                        debug(TAG+"Call builtin mirror(%f, %f, %f)"%(v[0],v[1], v[2]))
                         self.parse_block(s['block'])
                         self.active_context.mirror(v[0], v[1], v[2])
-                    debug("Leave mirror")
+                    debug(TAG+"Leave mirror")
                     self.pop_context()
                     self.pop_stack()
                 else:
                     raise UnhandledCaseError('unknown builtin statement \"%s\"'%(s['id'],))
         elif t=='stat_call':
             if use:
-                debug("Skip call because \"use\" is set")
+                debug(TAG+"Skip call because \"use\" is set")
             else:
                 if (s['id'] == 'print') or (s['id'] == 'echo'):
                     top = self.stack[-1]
@@ -835,16 +844,16 @@ class SCL:
                 else:
                     self.push_stack()
                     cbl = self.find_module(s['id'], s['line'])
-                    debug('Found module %s'%(s['id'],))
+                    debug(TAG+'Found module %s'%(s['id'],))
                     self.parse_kwargs(s['id'], s['line'], cbl['args'], s['args'])
                     for statement in cbl['block']:
-                        debug('Parse statement %s'%(statement,))
+                        debug(TAG+'Parse statement %s'%(statement,))
                         self.parse_statement(statement)
-                    debug('Module %s done'%(s['id']))
+                    debug(TAG+'Module %s done'%(s['id']))
                     self.pop_stack()
         elif t=='stat_call_builtin_modules':
             if use:
-                debug("Skip call builtin modules because \"use\" is set")
+                debug(TAG+"Skip call builtin modules because \"use\" is set")
             else:
                 mid = s['id']
                 args = s['args']
@@ -864,7 +873,7 @@ class SCL:
                         l = (len(e) if (len(e)<len(e_)) else (len(e_)))
                         for i in range(l):
                             e[i] = e_[i]
-                    debug("Call builtin line(%s->%s)"%(st, e))
+                    debug(TAG+"Call builtin line(%s->%s)"%(st, e))
                     if not debug_parser:
                         self.active_context.line(V3(st[0],st[1],st[2]), V3(e[0],e[1],e[2]))
                     else:
@@ -878,7 +887,7 @@ class SCL:
                     if (top.has_variable('r', s['line'])):
                         r = self.find_variable_value('r', s['line'])
 
-                    debug("Call builtin fillet(%f)"%(r,))
+                    debug(TAG+"Call builtin fillet(%f)"%(r,))
                     if not debug_parser:
                         self.active_context.fillet(r)
                     else:
@@ -894,7 +903,7 @@ class SCL:
                         points = self.find_variable_value('points', s['line'])
                     if (top.has_variable('paths', s['line'])):
                         paths = self.find_variable_value('paths', s['line'])
-                    debug("Call builtin polygon(%s, %s) line: %i"%(str(points), str(paths), s['line']))
+                    debug(TAG+"Call builtin polygon(%s, %s) line: %i"%(str(points), str(paths), s['line']))
                     if not debug_parser:
                         self.push_context(SCLPart3, get_inc_name("part"))
                         try:
@@ -918,7 +927,7 @@ class SCL:
                             v[i] = v_[i]
                     if (top.has_variable('center', s['line'])):
                         center = self.find_variable_value('center', s['line'])
-                    debug("Call builtin cube(%s, %s) line: %i"%(str(v), str(center), s['line']))
+                    debug(TAG+"Call builtin cube(%s, %s) line: %i"%(str(v), str(center), s['line']))
                     if not debug_parser:
                         self.active_context.cube(V3(v[0], v[1], v[2]), center)
                     else:
@@ -953,8 +962,8 @@ class SCL:
                     if (top.has_variable('h', s['line'])):
                         h = self.find_variable_value('h', s['line'])
 
-                    debug("args: %s"%(s['args'],))
-                    debug("Call builtin cylinder(r=%s, d=%s, h=%s, center=%s) line: %i"%(str(r), str(d), str(h), str(center), s['line']))
+                    debug(TAG+"args: %s"%(s['args'],))
+                    debug(TAG+"Call builtin cylinder(r=%s, d=%s, h=%s, center=%s) line: %i"%(str(r), str(d), str(h), str(center), s['line']))
                     if not debug_parser:
                         self.active_context.cylinder(r, r1, r2, d, d1, d2, h, center)
                     else:
@@ -969,14 +978,14 @@ class SCL:
                     if (top.has_variable('filename', s['line'])):
                         path = self.find_variable_value('filename', s['line'])
                         path = unstringify(path)
-                    debug("Call builtin import_step(%s) line: %i"%(str(path), s['line']))
+                    debug(TAG+"Call builtin import_step(%s) line: %i"%(str(path), s['line']))
                     if not debug_parser:
                         base_paths = [os.getcwd(), os.path.dirname(os.path.abspath(self.path))]
                         paths = [os.path.join(bp, path) for bp in base_paths]
                         file_path = None
                         for p in paths:
                             if os.path.isfile(p):
-                                debug("Using path %s"%(p,))
+                                debug(TAG+"Using path %s"%(p,))
                                 file_path = p
                                 break
                         if (file_path != None):
@@ -995,14 +1004,14 @@ class SCL:
                     if (top.has_variable('filename', s['line'])):
                         path = self.find_variable_value('filename', s['line'])
                         path = unstringify(path)
-                    debug("Call builtin import_stl(%s) line: %i"%(str(path), s['line']))
+                    debug(TAG+"Call builtin import_stl(%s) line: %i"%(str(path), s['line']))
                     if not debug_parser:
                         base_paths = [os.getcwd(), os.path.dirname(os.path.abspath(self.path))]
                         paths = [os.path.join(bp, path) for bp in base_paths]
                         file_path = None
                         for p in paths:
                             if os.path.isfile(p):
-                                debug("Using path %s"%(p,))
+                                debug(TAG+"Using path %s"%(p,))
                                 file_path = p
                                 break
                         if (file_path != None):
@@ -1024,31 +1033,31 @@ class SCL:
             self.set_module(mid, s, l)
         elif t=='stat_for':
             if use:
-                debug("Skip for because \"use\" is set")
+                debug(TAG+"Skip for because \"use\" is set")
             else:
                 ctr_name = s['counter']
                 self.push_stack()
                 counter_vals = self.parse_expr(s['counter_vals'])
-                debug("counter_vals: %s"%(counter_vals,))
+                debug(TAG+"counter_vals: %s"%(counter_vals,))
                 block = s['block']
                 l = s['line']
                 top = self.stack[-1]
                 for c in counter_vals:
                     top.set_variable(ctr_name, c, l)
-                    debug("Set loop counter %s to %s (%s)"%(ctr_name, str(c), counter_vals))
+                    debug(TAG+"Set loop counter %s to %s (%s)"%(ctr_name, str(c), counter_vals))
                     for statement in block:
                         self.parse_statement(statement)
                 self.pop_stack()
         elif t=='stat_if':
             if use:
-                debug("Skip for because \"use\" is set")
+                debug(TAG+"Skip for because \"use\" is set")
             else:
                 cond = self.parse_expr(s['condition'])
                 if_block = s['blocks'][0]
                 else_block = None
                 if len(s['blocks'])>1:
                     else_block = s['blocks'][1]
-                debug("Cond: %s"%(str(cond),))
+                debug(TAG+"Cond: %s"%(str(cond),))
                 if (cond):
                     self.push_stack()
                     for statement in if_block:
@@ -1064,11 +1073,11 @@ class SCL:
             filename, ext = os.path.splitext(path)
             base_paths = [os.getcwd(), os.path.dirname(os.path.abspath(self.path))]
             paths = [os.path.join(bp, path) for bp in base_paths]
-            debug('paths: %s'%(repr(paths),))
+            debug(TAG+'paths: %s'%(repr(paths),))
             file_found = False
             for p in paths:
                 if os.path.isfile(p):
-                    debug("Using path %s"%(p,))
+                    debug(TAG+"Using path %s"%(p,))
                     parser = None
                     old_path = self.path
                     self.path = p
@@ -1086,7 +1095,7 @@ class SCL:
                         warning("%s:%i Use: unknown expression %s in file used at %s:%i"%(p, pe.lineno, pe.message, self.path, s['line']))
                         if (self.verbose>=4):
                             traceback.print_exc()
-                    debug(json.dumps(parser.data, indent=2))
+                    debug(TAG+json.dumps(parser.data, indent=2))
                     for s in parser.data:
                         self.parse_statement(s, use=True)
                     self.pop_context()
@@ -1102,7 +1111,7 @@ class SCL:
             file_found = False
             for p in paths:
                 if os.path.isfile(p):
-                    debug("Including path %s"%(path,))
+                    debug(TAG+"Including path %s"%(path,))
                     parser = None
                     old_path = self.path
                     self.path = p
@@ -1113,7 +1122,7 @@ class SCL:
                         warning("%s:%i Include: unknown expression %s in file included at %s:%i"%(p, pe.lineno, pe.message, self.path, s['line']))
                         if (self.verbose>=4):
                             traceback.print_exc()
-                    debug(json.dumps(parser.data, indent=2))
+                    debug(TAG+json.dumps(parser.data, indent=2))
                     for s in parser.data:
                         self.parse_statement(s)
                     self.path=old_path
@@ -1136,12 +1145,13 @@ if __name__=="__main__":
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         Singleton.pipe = pipe
         Singleton.img = img
+
         Singleton.scl = SCL(path=args.file, output_path=args.output,
                             verbose=args.verbose, extra={"linear-deflection": args.linear_deflection,
                                                          "angular-deflection": args.angular_deflection})
 
         ep.push_event(ee.main_start, args)
         ep.process()
-        if args.output == None:
-            win.mainloop()
+        # if args.output == None:
+        #     win.mainloop()
     RunGLFWDisplay(occt_proc, sys.argv[1:])
