@@ -1,37 +1,41 @@
 import json
 
-RQ_LOAD_IMAGE     = 'load_image'
-RQ_START_ROTATION = 'start_rotation'
-RQ_ROTATE         = 'rotate'
-RQ_SET_SIZE       = 'set_size'
-RQ_STOP           = 'stop'
-RQ_SCROLL         = 'scroll'
-RQ_MOVE           = 'move'
-RQ_PAN            = 'pan'
-RQ_CHECK_REDRAW   = 'check_redraw'
+RQ_LOAD_IMAGE      = 'load_image'
+RQ_START_ROTATION  = 'start_rotation'
+RQ_ROTATE          = 'rotate'
+RQ_SET_SIZE        = 'set_size'
+RQ_STOP            = 'stop'
+RQ_SCROLL          = 'scroll'
+RQ_MOVE            = 'move'
+RQ_PAN             = 'pan'
+RQ_CHECK_REDRAW    = 'check_redraw'
+RQ_GET_OBJECT_TREE = 'get_object_tree'
 
 requests = {
-    RQ_LOAD_IMAGE    : 1,
-    RQ_START_ROTATION: 2,
-    RQ_ROTATE        : 3,
-    RQ_SET_SIZE      : 4,
-    RQ_STOP          : 5,
-    RQ_SCROLL        : 6,
-    RQ_MOVE          : 7,
-    RQ_PAN           : 8,
-    RQ_CHECK_REDRAW  : 9,
+    RQ_LOAD_IMAGE       : 1,
+    RQ_START_ROTATION   : 2,
+    RQ_ROTATE           : 3,
+    RQ_SET_SIZE         : 4,
+    RQ_STOP             : 5,
+    RQ_SCROLL           : 6,
+    RQ_MOVE             : 7,
+    RQ_PAN              : 8,
+    RQ_CHECK_REDRAW     : 9,
+    RQ_GET_OBJECT_TREE  : 10,
 }
 
-RP_IMAGE_DATA    = 'image_data'
-RP_ACK           = 'ack'
-RP_ACK_SET_SIZE  = 'ack_set_size'
-RP_NOP           = 'nop'
+RP_IMAGE_DATA          = 'image_data'
+RP_ACK                 = 'ack'
+RP_ACK_SET_SIZE        = 'ack_set_size'
+RP_ACK_GET_OBJECT_TREE = 'ack_get_object_tree'
+RP_NOP                 = 'nop'
 
 replies = {
-    RP_IMAGE_DATA:   1,
-    RP_ACK:          2,
-    RP_ACK_SET_SIZE: 3,
-    RP_NOP:          4,
+    RP_IMAGE_DATA:          1,
+    RP_ACK:                 2,
+    RP_ACK_SET_SIZE:        3,
+    RP_ACK_GET_OBJECT_TREE: 4,
+    RP_NOP:                 5,
 }
 
 class rqItem:
@@ -93,3 +97,6 @@ class rqQueue:
 
     def rq_check_redraw(self):
         self.push_back(rqItem(RQ_CHECK_REDRAW, None, False))
+
+    def rq_get_object_tree(self):
+        self.push_back(rqItem(RQ_GET_OBJECT_TREE, None, False))

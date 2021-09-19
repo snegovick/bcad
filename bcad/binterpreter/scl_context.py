@@ -350,11 +350,18 @@ class SCLContext(object):
 
     def display(self, writer=None):
         debug("Display SCLContext")
+        objects = []
         for c in self.children:
-            c = self.child.display(writer)
+            objects.append(self.child.display(writer))
+        objects = {'name': self.name, 'children': objects}
+        debug("end SCLContext")
+        return objects
+
+    def start_display(self, writer=None):
         if (writer == None):
-            Singleton.sd.display.FitAll()
-            Singleton.sd.start_display()
+            if (self.parent == None):
+                Singleton.sd.display.FitAll()
+                Singleton.sd.start_display()
 
     def get_children(self):
         children = []
@@ -752,7 +759,7 @@ class SCLPart3(SCLContext):
                 scls.color([c.Red(), c.Green(), c.Blue()])
                 part = SCLPart3(self)
                 part.set_shape(scls)
-                name = get_inc_name(name)
+                #name = get_inc_name(name)
                 part.set_name(name)
                 current_part = part
             else:
@@ -760,7 +767,7 @@ class SCLPart3(SCLContext):
                 scls.color([c.Red(), c.Green(), c.Blue()])
                 sclp = SCLPart3(part)
                 sclp.set_shape(scls)
-                name = get_inc_name(name)
+                #name = get_inc_name(name)
                 sclp.set_name(name)
                 current_part = sclp
             debug("Creating step %s"%(name,))
@@ -782,12 +789,18 @@ class SCLPart3(SCLContext):
             #Singleton.sd.display.SetModeHLR()
         #else:
             #Singleton.sd.display.SetModeShaded()
+        objects = []
         for c in self.children:
-            c.display(writer)
+            objects.append(c.display(writer))
+        objects = {'name': self.name, 'children': objects}
 
         if self.shape != None:
             self.shape.display(writer)
 
+        debug("end SCLPart3")
+        return objects
+
+    def start_display(self, writer=None):
         if (writer == None):
             if (self.parent == None):
                 Singleton.sd.display.FitAll()
@@ -878,8 +891,11 @@ class SCLProfile2(SCLContext):
     def display(self, writer=None):
         debug("Display SCLProfile2")
         w = self.get_wire()
+        objects = {'name': self.name, 'children': None}
         if (w != None):
             Singleton.sd.display.DisplayShape(w, writer)
+        debug("end SCLProfile2")
+        return objects
 
 class SCLExtrude(SCLContext):
     def __init__(self, parent):
@@ -913,11 +929,15 @@ class SCLExtrude(SCLContext):
     def display(self, writer=None):
         debug("Display SCLExtrude")
         debug("Children: %s"%(repr(self.children),))
+        objects = []
         for c in self.children:
-            c.display(writer)
-
+            objects.append(c.display(writer))
+        objects = {'name': self.name, 'children': objects}
+        
         if self.shape != None:
             self.shape.display(writer)
+        debug("end SCLExtrude")
+        return objects
 
 def collect_wires(this):
     wires = []
@@ -964,11 +984,15 @@ class SCLLoft(SCLContext):
     def display(self, writer=None):
         debug("Display SCLLoft")
         debug("Children: %s"%(repr(self.children),))
+        objects = []
         for c in self.children:
-            c.display(writer)
+            objects.append(c.display(writer))
+        objects = {'name': self.name, 'children': objects}
 
         if self.shape != None:
             self.shape.display(writer)
+        debug("end SCLLoft")
+        return objects
 
 class SCLUnion(SCLPart3):
     def __init__(self, parent):
@@ -991,8 +1015,11 @@ class SCLUnion(SCLPart3):
 
     def display(self, writer=None):
         debug("Display SCLUnion")
+        objects = {'name': self.name, 'children': None}
         if self.shape != None:
             self.shape.display(writer)
+        debug("end SCLUnion")
+        return objects
 
 class SCLIntersection(SCLPart3):
     def __init__(self, parent):
@@ -1017,6 +1044,9 @@ class SCLIntersection(SCLPart3):
         debug("Display SCLIntersection")
         if self.shape != None:
             self.shape.display(writer)
+        objects = {'name': self.name, 'children': None}
+        debug("end SCLIntersection")
+        return objects
 
 class SCLDifference(SCLPart3):
     def __init__(self, parent):
@@ -1040,9 +1070,12 @@ class SCLDifference(SCLPart3):
         self.children = []
 
     def display(self, writer=None):
-        debug("Display SCLUnion")
+        debug("Display SCLDifference")
         if self.shape != None:
             self.shape.display(writer)
+        objects = {'name': self.name, 'children': None}
+        debug("end SCLDifference")
+        return objects
 
 class SCLProjection(SCLPart3):
     def __init__(self, parent):
@@ -1173,7 +1206,11 @@ class SCLProjection(SCLPart3):
 
     def display(self, writer=None):
         debug("Display SCLProjection")
+        objects = []
         for c in self.children:
-            c.display(writer)
+            objects.append(c.display(writer))
         if self.shape != None:
             self.shape.display(writer)
+        objects = {'name': self.name, 'children': objects}
+        debug("end SCLProjection")
+        return objects

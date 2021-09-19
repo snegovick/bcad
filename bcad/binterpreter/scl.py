@@ -227,6 +227,7 @@ class SCL:
         self.debug=False
 
         self.path = path
+        self.objects = None
 
     def reload_file(self):
         self.stack = [SCLFrame()]
@@ -279,7 +280,11 @@ class SCL:
                     self.parse_statement(s)
 
         debug(TAG+"Display context")
-        self.context.display(writer)
+        self.objects = self.context.display(writer)
+        debug(TAG+"Objects tree")
+        debug(self.objects)
+
+        self.root.start_display(writer)
         
         if self.output_path != None:
             writer.Write(self.output_path)

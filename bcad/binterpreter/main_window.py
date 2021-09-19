@@ -34,6 +34,8 @@ class MainWindow():
             self.canva.set_img(img)
             self.canva.init_driver()
             self.impl = GlfwRenderer(self.canva.window)
+            self.objtree = None
+            self.show_objtree = True
         else:
             self.canva = offscreenViewer3d()
             self.canva.set_pipe(pipe)
@@ -61,21 +63,57 @@ class MainWindow():
             else:
                 self.canva.set_image_black()
             self.canva.reply_received()
+        elif jdata['rp'] == replies[RP_ACK_GET_OBJECT_TREE]:
+            objtree = jdata['args']
+            self.objtree = objtree
+            self.canva.reply_received()
         elif jdata['rp'] == replies[RP_NOP]:
             self.canva.reply_received()
+
+    def object_node(self, node):
+        if node:
+            if node['children']:
+                if (imgui.tree_node(node['name'])):
+                    for c in node['children']:
+                        self.object_node(c)
+                    imgui.tree_pop()
+            else:
+                imgui.text(node['name'])
+
+    def object_list(self, first_frame, x, y, w, h):
+        if first_frame:
+            imgui.core.set_next_window_position(x, y, imgui.ALWAYS)
+        imgui.begin("Objects")
+
+        if self.objtree:
+            self.object_node(self.objtree)
+
+        hovered = imgui.core.is_window_hovered()
+            
+        imgui.end()
+        return hovered
 
     def mainloop(self):
         if self.use_imgui:
             self.canva.init_shader()
             self.canva.create_objects()
+            
             self.rqq.rq_set_size(self.canva.view_size[0], self.canva.view_size[1])
             print("Waiting set size reply")
             self.rqq.process(self.canva)
             self.parse_reply()
+            
+            self.rqq.rq_get_object_tree()
+            print("Waiting get object tree reply")
+            self.rqq.process(self.canva)
+            self.parse_reply()
+            
             self.rqq.rq_load_image()
             last = time.time()
+            first_frame = True
             while (not self.canva.should_close() and (not self.please_stop)):
                 current = time.time()
+                menu_bar_w_h = (0,0)
                 self.canva.proc()
                 if self.canva.get_need_resize():
                     self.canva.set_image_black()
@@ -102,41 +140,54 @@ class MainWindow():
                     if imgui.begin_menu("Render", True):
                         imgui.menu_item("Save", None, False, True)
                         imgui.end_menu()
+                    if imgui.begin_menu("View", True):
+                        clicked_view, selected_view = imgui.menu_item("Show object tree", None, False, True)
+                        if clicked_view:
+                            self.show_objtree = not(self.show_objtree)
+                        imgui.end_menu()
+                    wh = imgui.core.get_window_size()
+                    menu_bar_w_h = wh
                     imgui.end_main_menu_bar()
 
-                # right button rotation
-                if imgui.is_mouse_down(1):
-                    if self.canva.drag_start == None:
-                        pos = imgui.get_io().mouse_pos
-                        self.canva.drag_start = [pos[0], pos[1]]
-                        self.rqq.rq_start_rotation(self.canva.drag_start[0], self.canva.drag_start[1])
-                    else:
-                        pos = imgui.get_io().mouse_pos
-                        self.pt = [pos[0], pos[1]]
-                        self.rqq.rq_rotate(self.pt[0], self.pt[1])
-                # left button panning
-                elif imgui.is_mouse_down(0):
-                    if self.canva.drag_start == None:
-                        pos = imgui.get_io().mouse_pos
-                        self.canva.drag_start = [pos[0], pos[1]]
-                        self.prev_pos = pos
-                    else:
-                        pos = imgui.get_io().mouse_pos
-                        if not self.prev_pos == pos:
-                            self.rqq.rq_pan(pos[0]-self.prev_pos[0], pos[1]-self.prev_pos[1])
-                            self.prev_pos = pos
-                # wheel button scrolling
-                else:
-                    self.canva.drag_start = None
-                    mw = imgui.get_io().mouse_wheel
-                    pos = imgui.get_io().mouse_pos
-                    if mw != 0:
-                        self.rqq.rq_scroll(mw)
-                    else:
-                        if not self.prev_pos == pos:
-                            self.rqq.rq_move(pos[0], pos[1])
-                            self.prev_pos = pos
+                hovered = False
+                if self.show_objtree:
+                    hovered = self.object_list(first_frame, 0, menu_bar_w_h[1], 0, 0)
 
+                if not hovered:
+                    # right button rotation
+                    if imgui.is_mouse_down(1):
+                        if self.canva.drag_start == None:
+                            pos = imgui.get_io().mouse_pos
+                            self.canva.drag_start = [pos[0], pos[1]]
+                            self.rqq.rq_start_rotation(self.canva.drag_start[0], self.canva.drag_start[1])
+                        else:
+                            pos = imgui.get_io().mouse_pos
+                            self.pt = [pos[0], pos[1]]
+                            self.rqq.rq_rotate(self.pt[0], self.pt[1])
+                    # left button panning
+                    elif imgui.is_mouse_down(2):
+                        if self.canva.drag_start == None:
+                            pos = imgui.get_io().mouse_pos
+                            self.canva.drag_start = [pos[0], pos[1]]
+                            self.prev_pos = pos
+                        else:
+                            pos = imgui.get_io().mouse_pos
+                            if not self.prev_pos == pos:
+                                self.rqq.rq_pan(pos[0]-self.prev_pos[0], pos[1]-self.prev_pos[1])
+                                self.prev_pos = pos
+                    # wheel button scrolling
+                    else:
+                        self.canva.drag_start = None
+                        mw = imgui.get_io().mouse_wheel
+                        pos = imgui.get_io().mouse_pos
+                        if mw != 0:
+                            self.rqq.rq_scroll(mw)
+                        else:
+                            if not self.prev_pos == pos:
+                                self.rqq.rq_move(pos[0], pos[1])
+                                self.prev_pos = pos
+
+                first_frame = False
                 self.canva.start_frame()
                 imgui.render()
                 draw_data = imgui.get_draw_data()
@@ -169,6 +220,8 @@ class MainWindow():
                         self.canva.call_pan(jdata['args'][0], jdata['args'][1])
                     elif jdata['rq'] == requests[RQ_CHECK_REDRAW]:
                         self.canva.call_check_redraw()
+                    elif jdata['rq'] == requests[RQ_GET_OBJECT_TREE]:
+                        self.canva.call_get_object_tree()
                     elif jdata['rq'] == requests[RQ_STOP]:
                         break
                 time.sleep(0.01)

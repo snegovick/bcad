@@ -94,3 +94,6 @@ class offscreenViewer3d:
             self.pipe.send(json.dumps({'rp': replies[RP_ACK]}))
         else:
             self.pipe.send(json.dumps({'rp': replies[RP_NOP]}))
+
+    def call_get_object_tree(self):
+        self.pipe.send(json.dumps({'rp': replies[RP_ACK_GET_OBJECT_TREE], 'args': Singleton.scl.objects}))
