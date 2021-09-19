@@ -38,7 +38,10 @@ from OCC.Core.Geom import Geom_Curve, Geom_Surface
 from OCC.Core.Geom2d import Geom2d_Curve
 from OCC.Core.Visualization import Display3d
 from OCC.Core.V3d import (V3d_ZBUFFER, V3d_Zpos, V3d_Zneg, V3d_Xpos,
-                          V3d_Xneg, V3d_Ypos, V3d_Yneg, V3d_XposYnegZpos)
+                          V3d_Xneg, V3d_Ypos, V3d_Yneg, V3d_XposYposZpos,
+                          V3d_XnegYposZpos, V3d_XnegYnegZpos, V3d_XposYnegZpos,
+                          V3d_XposYposZneg, V3d_XnegYposZneg, V3d_XnegYnegZneg,
+                          V3d_XposYnegZneg)
 from OCC.Core.TCollection import TCollection_ExtendedString, TCollection_AsciiString
 from OCC.Core.Quantity import (Quantity_Color, Quantity_TOC_RGB, Quantity_NOC_WHITE,
                                Quantity_NOC_BLACK, Quantity_NOC_BLUE1,
@@ -276,8 +279,29 @@ class Viewer3d(Display3d):
     def View_Rear(self):
         self.View.SetProj(V3d_Ypos)
 
-    def View_Iso(self):
+    def View_Iso1(self):
+        self.View.SetProj(V3d_XposYposZpos)
+
+    def View_Iso2(self):
+        self.View.SetProj(V3d_XnegYposZpos)
+
+    def View_Iso3(self):
+        self.View.SetProj(V3d_XnegYnegZpos)
+
+    def View_Iso4(self):
         self.View.SetProj(V3d_XposYnegZpos)
+
+    def View_Iso5(self):
+        self.View.SetProj(V3d_XposYposZneg)
+
+    def View_Iso6(self):
+        self.View.SetProj(V3d_XnegYposZneg)
+
+    def View_Iso7(self):
+        self.View.SetProj(V3d_XnegYnegZneg)
+
+    def View_Iso8(self):
+        self.View.SetProj(V3d_XposYnegZneg)
 
     def EnableTextureEnv(self, name_of_texture=Graphic3d_NOT_ENV_CLOUDS):
         """ enable environment mapping. Possible modes are

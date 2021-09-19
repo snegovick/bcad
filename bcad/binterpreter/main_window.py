@@ -36,6 +36,7 @@ class MainWindow():
             self.impl = GlfwRenderer(self.canva.window)
             self.objtree = None
             self.show_objtree = True
+            self.show_views = True
         else:
             self.canva = offscreenViewer3d()
             self.canva.set_pipe(pipe)
@@ -80,7 +81,7 @@ class MainWindow():
             else:
                 imgui.text(node['name'])
 
-    def object_list(self, first_frame, x, y, w, h):
+    def object_tree(self, first_frame, x, y, w, h):
         if first_frame:
             imgui.core.set_next_window_position(x, y, imgui.ALWAYS)
         imgui.begin("Objects")
@@ -89,9 +90,48 @@ class MainWindow():
             self.object_node(self.objtree)
 
         hovered = imgui.core.is_window_hovered()
-            
+        wh = imgui.core.get_window_size()
+
         imgui.end()
-        return hovered
+        return hovered, wh
+
+    def views_list(self, first_frame, x, y, w, h):
+        if first_frame:
+            imgui.core.set_next_window_position(x, y, imgui.ALWAYS)
+        imgui.begin("Views")
+        if imgui.button('Left'):
+            self.rqq.rq_set_view('left')
+        elif imgui.button('Right'):
+            self.rqq.rq_set_view('right')
+        elif imgui.button('Top'):
+            self.rqq.rq_set_view('top')
+        elif imgui.button('Bottom'):
+            self.rqq.rq_set_view('bottom')
+        elif imgui.button('Front'):
+            self.rqq.rq_set_view('front')
+        elif imgui.button('Rear'):
+            self.rqq.rq_set_view('rear')
+        elif imgui.button('Iso1'):
+            self.rqq.rq_set_view('iso1')
+        elif imgui.button('Iso2'):
+            self.rqq.rq_set_view('iso2')
+        elif imgui.button('Iso3'):
+            self.rqq.rq_set_view('iso3')
+        elif imgui.button('Iso4'):
+            self.rqq.rq_set_view('iso4')
+        elif imgui.button('Iso5'):
+            self.rqq.rq_set_view('iso5')
+        elif imgui.button('Iso6'):
+            self.rqq.rq_set_view('iso6')
+        elif imgui.button('Iso7'):
+            self.rqq.rq_set_view('iso7')
+        elif imgui.button('Iso8'):
+            self.rqq.rq_set_view('iso8')
+        hovered = imgui.core.is_window_hovered()
+        wh = imgui.core.get_window_size()
+
+        imgui.end()
+        return hovered, wh
 
     def mainloop(self):
         if self.use_imgui:
@@ -114,6 +154,8 @@ class MainWindow():
             while (not self.canva.should_close() and (not self.please_stop)):
                 current = time.time()
                 menu_bar_w_h = (0,0)
+                objtree_w_h = (0,0)
+                views_w_h = (0,0)
                 self.canva.proc()
                 if self.canva.get_need_resize():
                     self.canva.set_image_black()
@@ -141,9 +183,12 @@ class MainWindow():
                         imgui.menu_item("Save", None, False, True)
                         imgui.end_menu()
                     if imgui.begin_menu("View", True):
-                        clicked_view, selected_view = imgui.menu_item("Show object tree", None, False, True)
-                        if clicked_view:
+                        clicked_view_objtree, selected_view_objtree = imgui.menu_item("Show object tree", None, False, True)
+                        if clicked_view_objtree:
                             self.show_objtree = not(self.show_objtree)
+                        clicked_view_views, selected_view_views = imgui.menu_item("Show views", None, False, True)
+                        if clicked_view_views:
+                            self.show_views = not(self.show_views)
                         imgui.end_menu()
                     wh = imgui.core.get_window_size()
                     menu_bar_w_h = wh
@@ -151,7 +196,10 @@ class MainWindow():
 
                 hovered = False
                 if self.show_objtree:
-                    hovered = self.object_list(first_frame, 0, menu_bar_w_h[1], 0, 0)
+                    hovered, objtree_w_h = self.object_tree(first_frame, 0, menu_bar_w_h[1], 0, 0)
+
+                if self.show_views:
+                    hovered, views_w_h = self.views_list(first_frame, objtree_w_h[0], menu_bar_w_h[1], 0, 0)
 
                 if not hovered:
                     # right button rotation
@@ -222,6 +270,8 @@ class MainWindow():
                         self.canva.call_check_redraw()
                     elif jdata['rq'] == requests[RQ_GET_OBJECT_TREE]:
                         self.canva.call_get_object_tree()
+                    elif jdata['rq'] == requests[RQ_SET_VIEW]:
+                        self.canva.call_set_view(jdata['args'])
                     elif jdata['rq'] == requests[RQ_STOP]:
                         break
                 time.sleep(0.01)

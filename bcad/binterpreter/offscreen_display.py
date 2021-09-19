@@ -97,3 +97,36 @@ class offscreenViewer3d:
 
     def call_get_object_tree(self):
         self.pipe.send(json.dumps({'rp': replies[RP_ACK_GET_OBJECT_TREE], 'args': Singleton.scl.objects}))
+
+    def call_set_view(self, name):
+        print("Set view:", name)
+        if name == 'left':
+            self._display.View_Left()
+        elif name == 'right':
+            self._display.View_Right()
+        elif name == 'top':
+            self._display.View_Top()
+        elif name == 'bottom':
+            self._display.View_Bottom()
+        elif name == 'front':
+            self._display.View_Front()
+        elif name == 'rear':
+            self._display.View_Rear()
+        elif name == 'iso1':
+            self._display.View_Iso1()
+        elif name == 'iso2':
+            self._display.View_Iso2()
+        elif name == 'iso3':
+            self._display.View_Iso3()
+        elif name == 'iso4':
+            self._display.View_Iso4()
+        elif name == 'iso5':
+            self._display.View_Iso5()
+        elif name == 'iso6':
+            self._display.View_Iso6()
+        elif name == 'iso7':
+            self._display.View_Iso7()
+        elif name == 'iso8':
+            self._display.View_Iso8()
+        self.update_img()
+        self.pipe.send(json.dumps({'rp': replies[RP_ACK]}))

@@ -10,6 +10,7 @@ RQ_MOVE            = 'move'
 RQ_PAN             = 'pan'
 RQ_CHECK_REDRAW    = 'check_redraw'
 RQ_GET_OBJECT_TREE = 'get_object_tree'
+RQ_SET_VIEW        = 'set_view'
 
 requests = {
     RQ_LOAD_IMAGE       : 1,
@@ -22,6 +23,7 @@ requests = {
     RQ_PAN              : 8,
     RQ_CHECK_REDRAW     : 9,
     RQ_GET_OBJECT_TREE  : 10,
+    RQ_SET_VIEW         : 11,
 }
 
 RP_IMAGE_DATA          = 'image_data'
@@ -100,3 +102,7 @@ class rqQueue:
 
     def rq_get_object_tree(self):
         self.push_back(rqItem(RQ_GET_OBJECT_TREE, None, False))
+
+    def rq_set_view(self, name):
+        print("set view", name)
+        self.push_back(rqItem(RQ_SET_VIEW, name, False))
